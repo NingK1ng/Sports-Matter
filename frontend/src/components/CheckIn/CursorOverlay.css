@@ -1,0 +1,20 @@
+html.sm-custom-cursor,
+html.sm-custom-cursor *,
+body.sm-custom-cursor,
+body.sm-custom-cursor * {
+  cursor: none !important;
+}
+
+.sm-cursor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  z-index: 99999;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  transform: translate3d(-100px, -100px, 0);
+  will-change: transform, opacity;
+}

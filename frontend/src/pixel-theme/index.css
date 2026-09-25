@@ -1,0 +1,15 @@
+@import './variables.css';
+
+html, body {
+  background: var(--px-bg-color-page);
+}
+
+body {
+  font-family: var(--px-font-body);
+  color: var(--px-color-base);
+}
+
+a {
+  color: var(--px-color-primary);
+  text-decoration: none;
+}

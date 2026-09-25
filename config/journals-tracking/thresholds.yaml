@@ -1,0 +1,47 @@
+# 标签判定阈值配置
+# 说明：冷启动后根据实际数据分布调整
+
+sports_science:
+  # 早期趋势标签
+  trending:
+    min_days: 30              # 最小发表天数
+    max_days: 90              # 最大发表天数
+    rate_threshold: 0.15      # 被引速率阈值（次/天）
+    cooldown_days: 3          # 冷却期（发表<3天不判定）
+  
+  # 热点标签
+  hot:
+    min_days: 90              # 最小发表天数
+    percentile_threshold: 85  # 被引分位数阈值
+  
+  # 经典标签
+  classic:
+    min_days: 180             # 最小发表天数（避免新文献异常）
+    count_threshold: 50       # 被引数阈值
+
+cns:
+  # 早期趋势标签（CNS期刊阈值更高）
+  trending:
+    min_days: 30
+    max_days: 90
+    rate_threshold: 1.0       # 被引速率阈值（次/天）
+    cooldown_days: 3
+  
+  # 热点标签
+  hot:
+    min_days: 90
+    percentile_threshold: 95  # 被引分位数阈值
+  
+  # 经典标签
+  classic:
+    min_days: 180
+    count_threshold: 200      # 被引数阈值
+
+# 标签互斥/共存规则
+label_rules:
+  # Trending vs Hot：按时间窗互斥
+  # Classic：可与Trending/Hot共存
+  # New vs Recent：按时间窗互斥
+  time_labels:
+    new: 7                    # ≤7天
+    recent: 30                # 7-30天

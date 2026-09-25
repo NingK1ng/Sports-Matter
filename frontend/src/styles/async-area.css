@@ -1,0 +1,181 @@
+/* Async Area 像素风格样式 */
+
+@font-face {
+  font-family: 'BoutiqueBitmap';
+  src: url('/font/BoutiqueBitmap9x9_1.9.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  /* 木质纹理色调 */
+  --wood-bg: #f8f5f0;
+  --wood-stripe: #ebe5dc;
+  --wood-stripe-dark: #e8e0d3;
+  
+  /* 像素按钮色彩 */
+  --pixel-btn-bg: #e8d7b9;
+  --pixel-btn-border: #8b7355;
+  --pixel-btn-hover: #f4e4c7;
+  --pixel-btn-text: #2d2d2d;
+  
+  /* 滚动条颜色 */
+  --scrollbar-thumb: #8b7355;
+  --scrollbar-track: #f8f5f0;
+  --scrollbar-border: #e0d5c0;
+  
+  /* 选中高亮 */
+  --selection-bg: #8b73554d;
+}
+
+/* 像素装饰边框 */
+.pixel-decoration {
+  position: relative;
+}
+
+.pixel-decoration .pixel-top,
+.pixel-decoration .pixel-bottom {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    #8b735580 0px,
+    #8b735580 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+.pixel-decoration .pixel-left,
+.pixel-decoration .pixel-right {
+  position: absolute;
+  top: 4px;
+  width: 2px;
+  height: calc(100% - 8px);
+  background: repeating-linear-gradient(
+    to bottom,
+    #8b735580 0px,
+    #8b735580 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+.pixel-decoration .pixel-top { top: 0; }
+.pixel-decoration .pixel-bottom { bottom: 0; }
+.pixel-decoration .pixel-left { left: 0; }
+.pixel-decoration .pixel-right { right: 0; }
+
+/* 像素按钮 */
+.pixel-btn {
+  position: relative;
+  height: 32px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 16px;
+  color: #2d2d2d;
+  background: #e8d7b9;
+  border: 2px solid #8b7355;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.pixel-btn:hover {
+  transform: translateY(-1px);
+  background: #f4e4c7;
+}
+
+.pixel-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 像素卡片 */
+.pixel-card {
+  background: #fff;
+  border: 2px solid #8b7355;
+  border-radius: 8px;
+  box-shadow: 4px 4px #1a1a1a;
+}
+
+/* 像素标题 */
+.pixel-title {
+  font-family: 'BoutiqueBitmap', monospace;
+  color: #2d2d2d;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #8b7355;
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #8b7355 #f8f5f0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f8f5f0;
+  border-left: 2px solid #e0d5c0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #8b7355;
+  border: 2px solid #f8f5f0;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9b8365;
+}
+
+/* 木质纹理背景 */
+.wood-texture {
+  background-color: #f8f5f0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    #ebe5dc 0px,
+    #ebe5dc 2px,
+    transparent 2px,
+    transparent 20px
+  );
+  position: relative;
+}
+
+.wood-texture-light {
+  background-color: #f8f5f0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    #ebe5dc 0px,
+    #ebe5dc 2px,
+    transparent 2px,
+    transparent 20px
+  );
+}
+
+.wood-texture-dark {
+  background-color: #f8f5f0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    #e8e0d3 0px,
+    #e8e0d3 2px,
+    transparent 2px,
+    transparent 20px
+  );
+}
+
+/* 覆盖默认选中样式 */
+::selection {
+  background-color: #8b73554d;
+}
+
+::-moz-selection {
+  background-color: #8b73554d;
+}

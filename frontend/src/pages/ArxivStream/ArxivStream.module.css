@@ -1,0 +1,449 @@
+/* arXiv预印本前沿模块样式 - 像素风格 */
+
+.arxivStream {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-height: calc(100vh - 144px);
+}
+
+.pageHeader {
+  text-align: center;
+  padding: 24px 20px 32px;
+  margin-bottom: 20px;
+  border-bottom: none;
+}
+
+.pageTitle {
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 32px;
+  color: #2d2d2d;
+  margin: 0;
+  letter-spacing: 3px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 1s ease-out, transform 1s ease-out;
+}
+
+.pageTitle.fadeIn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.filtersCard {
+  background: transparent;
+  padding: 20px;
+  border: 2px solid #8b7355;
+  border-radius: 0;
+  box-shadow: 4px 4px #1a1a1a;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  row-gap: 14px;
+  align-items: flex-end;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterGroup label {
+  font-family: 'BoutiqueBitmap', monospace;
+  font-weight: 400;
+  color: #2d2d2d;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.filterGroup select,
+.filterGroup input {
+  padding: 8px 12px;
+  border: 2px solid #8b7355;
+  border-radius: 0;
+  font-size: 13px;
+  background: transparent;
+  transition: border-color 0.2s ease;
+  box-shadow: none;
+}
+
+.filterGroup select:focus,
+.filterGroup input:focus {
+  outline: none;
+  border-color: #6a5a45;
+}
+
+.filterGroup input {
+  width: 100%;
+}
+
+.filterGroupSearch {
+  grid-column: 1 / -1;
+}
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+}
+
+.searchRow input {
+  flex: 1;
+}
+
+.filterActions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.filterActions button {
+  padding: 8px 20px;
+  background: rgba(232, 215, 185, 0.6);
+  color: #2d2d2d;
+  border: 2px solid #8b7355;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 2px 2px #1a1a1a;
+}
+
+.filterActions button:hover {
+  transform: translateY(-2px);
+  background: rgba(244, 228, 199, 0.3);
+  box-shadow: 4px 4px #1a1a1a;
+}
+
+.filterActions .secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #2d2d2d;
+}
+
+.filterActions .secondary:hover {
+  background: transparent;
+}
+
+.articlesList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.articleItem {
+  padding: 20px;
+  background: var(--px-color-white);
+  border: 2px solid #8b7355;
+  border-radius: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 3px 3px #1a1a1a;
+}
+
+.articleItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 5px 5px #1a1a1a;
+}
+
+.articleTitle {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #2d2d2d;
+  margin-bottom: 10px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: color 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.articleTitle:hover {
+  color: #6a5a45;
+}
+
+.articleTitle span {
+  flex: 1;
+}
+
+/* 标题翻译结果 */
+.titleTranslation {
+  margin-bottom: 10px;
+  padding: 12px;
+  background: transparent;
+  border: 2px solid #8b7355;
+  border-left-width: 4px;
+  border-radius: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2d2d2d;
+}
+
+.titleTranslation strong {
+  margin-right: 6px;
+}
+
+.articleMeta {
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  color: #8b7355;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.metaSeparator {
+  color: #8b7355;
+  margin: 0 6px;
+}
+
+.metaSource {
+  color: #4a90e2;
+  font-weight: 400;
+}
+
+.metaVersion {
+  color: #e2a44a;
+  font-weight: 400;
+}
+
+.articleTags {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 2px solid #8b7355;
+  border-radius: 4px;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.tagCategory {
+  background: rgba(232, 215, 185, 0.6);
+  font-weight: 500;
+}
+
+.tagArxivCategory {
+  background: rgba(74, 144, 226, 0.1);
+  color: #4a90e2;
+  border-color: #4a90e2;
+}
+
+.tagRelevance {
+  background: rgba(124, 179, 66, 0.1);
+  color: #7cb342;
+  border-color: #7cb342;
+}
+
+.tagArxivId {
+  background: transparent;
+  color: #8b7355;
+  border-color: #8b7355;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+}
+
+.articleActions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.toggleAbstract {
+  color: #8b7355;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  cursor: pointer;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.toggleAbstract:hover {
+  color: #6a5a45;
+}
+
+.pdfLink,
+.arxivLink {
+  color: #8b7355;
+  text-decoration: none;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.pdfLink:hover,
+.arxivLink:hover {
+  color: #6a5a45;
+  text-decoration: underline;
+}
+
+.articleAbstract {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(250, 247, 242, 0.2);
+  border: 2px solid #8b7355;
+  border-left-width: 4px;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #2d2d2d;
+  max-height: 400px;
+  overflow-y: auto;
+  animation: slideDown 0.3s ease-out;
+}
+
+.abstractToggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #8b7355;
+  padding-bottom: 8px;
+}
+
+.abstractToggle button {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  color: #8b7355;
+  transition: color 0.2s, border-bottom 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.abstractToggle button.active {
+  color: #2d2d2d;
+  border-bottom: 2px solid #2d2d2d;
+  font-weight: 500;
+}
+
+.abstractToggle button:hover {
+  color: #6a5a45;
+}
+
+.abstractOriginal,
+.abstractTranslation {
+  line-height: 1.7;
+}
+
+.abstractOriginal strong,
+.abstractTranslation strong {
+  color: #2d2d2d;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 错误状态 */
+.errorMessage {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--px-bg-color-page);
+  border: 3px solid var(--px-color-danger, #e76e55);
+  margin: 20px 0;
+}
+
+.errorIcon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.errorMessage p {
+  color: var(--px-color-danger, #e76e55);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.retryButton {
+  padding: 10px 16px;
+  background: var(--px-color-danger, #e76e55);
+  color: var(--px-color-white);
+  border: 3px solid var(--px-color-base);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
+  transition: box-shadow 0.08s ease;
+  box-shadow: 3px 3px 0 0 var(--px-color-base);
+}
+
+.retryButton:hover {
+  box-shadow: 4px 4px 0 0 var(--px-color-base);
+}
+
+/* 空状态 */
+.emptyState {
+  text-align: center;
+  padding: 80px 20px;
+  color: #666;
+}
+
+.emptyState p {
+  font-size: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .arxivStream {
+    padding: 16px 12px;
+  }
+
+  .filtersCard {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .filterGroup {
+    width: 100%;
+  }
+
+  .pageHeader h1 {
+    font-size: 16px;
+  }
+
+  .articleItem {
+    padding: 12px;
+  }
+
+  .articleTitle {
+    font-size: 13px;
+  }
+
+  .articleActions {
+    gap: 12px;
+  }
+}

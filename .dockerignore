@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 环境变量
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# 文档
+docs/
+
+# 其他
+tmp/
+logs/
+*.log
+backup/
+data/
+*.dump
+*.sql.gz
+*.tar.gz
+node_modules/
+frontend/dist/
+Youtu-agent/
+agent-framework-main/
+youtu-graphrag/

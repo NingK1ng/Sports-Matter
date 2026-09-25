@@ -1,0 +1,311 @@
+# 期刊过滤配置文件
+# 用于文献流模块的期刊质量过滤和顶刊开关功能
+# 更新日期：2025-10-31
+# 说明：黑名单严格只包含中科院4区期刊（共66本）
+
+# ============================================
+# 顶刊配置（5本 - 1区和2区顶刊）
+# ============================================
+top_journals:
+  - name: "British Journal of Sports Medicine"
+    issn: "0306-3674"
+    nlm_abbr: "Br J Sports Med"
+    pubmed_query: '"Br J Sports Med"[jour]'
+  
+  - name: "American Journal of Sports Medicine"
+    issn: "0363-5465"
+    nlm_abbr: "Am J Sports Med"
+    pubmed_query: '"Am J Sports Med"[jour]'
+  
+  - name: "Sports Medicine"
+    issn: "0112-1642"
+    nlm_abbr: "Sports Med"
+    pubmed_query: '"Sports Med"[jour]'
+  
+  - name: "Sports Medicine - Open"
+    issn: "2199-1170"
+    nlm_abbr: "Sports Med Open"
+    pubmed_query: '"Sports Med Open"[jour]'
+  
+  - name: "Journal of Sport and Health Science"
+    issn: "2095-2546"
+    nlm_abbr: "J Sport Health Sci"
+    pubmed_query: '"J Sport Health Sci"[jour]'
+
+# ============================================
+# 黑名单期刊（66本，全部为中科院4区）
+# ============================================
+# 说明：这些期刊质量较低，建议用户过滤
+# ISSN已添加便于验证
+blacklist:
+  # 已验证的4区期刊（原黑名单中正确的部分）
+  - issn: "0268-0033"
+    name: "CLINICAL BIOMECHANICS"
+    nlm_abbr: "Clin Biomech"
+  
+  - issn: "0736-5829"
+    name: "ADAPTED PHYSICAL ACTIVITY QUARTERLY"
+    nlm_abbr: "Adapt Phys Activ Q"
+  
+  - issn: "1077-5552"
+    name: "EXERCISE IMMUNOLOGY REVIEW"
+    nlm_abbr: "Exerc Immunol Rev"
+  
+  - issn: "0899-8493"
+    name: "PEDIATRIC EXERCISE SCIENCE"
+    nlm_abbr: "Pediatr Exerc Sci"
+  
+  - issn: "0968-0160"
+    name: "KNEE"
+    nlm_abbr: "Knee"
+  
+  - issn: "1934-1482"
+    name: "PM&R"
+    nlm_abbr: "PM R"
+  
+  - issn: "1087-1640"
+    name: "MOTOR CONTROL"
+    nlm_abbr: "Motor Control"
+  
+  - issn: "1643-8698"
+    name: "Archives of Budo"
+    nlm_abbr: "Arch Budo"
+  
+  - issn: "0765-1597"
+    name: "SCIENCE & SPORTS"
+    nlm_abbr: "Sci Sports"
+  
+  - issn: "1369-7072"
+    name: "Sports Engineering"
+    nlm_abbr: "Sports Eng"
+  
+  - issn: "0025-7826"
+    name: "MEDICINA DELLO SPORT"
+    nlm_abbr: "Med Sport (Roma)"
+  
+  - issn: "1543-8627"
+    name: "Research in Sports Medicine"
+    nlm_abbr: "Res Sports Med"
+  
+  - issn: "0932-0555"
+    name: "SPORTVERLETZUNG-SPORTSCHADEN"
+    nlm_abbr: "Sportverletz Sportschaden"
+  
+  - issn: "0091-3847"
+    name: "PHYSICIAN AND SPORTSMEDICINE"
+    nlm_abbr: "Physician Sportsmed"
+  
+  - issn: "2573-8488"
+    name: "Translational Sports Medicine"
+    nlm_abbr: "Transl Sports Med"
+  
+  - issn: "1091-5397"
+    name: "ACSMS HEALTH & FITNESS JOURNAL"
+    nlm_abbr: "ACSMs Health Fit J"
+  
+  - issn: "1537-890X"
+    name: "Current Sports Medicine Reports"
+    nlm_abbr: "Curr Sports Med Rep"
+  
+  - issn: "1065-8483"
+    name: "Journal of Applied Biomechanics"
+    nlm_abbr: "J Appl Biomech"
+  
+  - issn: "1056-6716"
+    name: "Journal of Sport Rehabilitation"
+    nlm_abbr: "J Sport Rehabil"
+  
+  - issn: "1527-0297"
+    name: "HIGH ALTITUDE MEDICINE & BIOLOGY"
+    nlm_abbr: "High Alt Med Biol"
+  
+  - issn: "0959-3020"
+    name: "ISOKINETICS AND EXERCISE SCIENCE"
+    nlm_abbr: "Isokinet Exerc Sci"
+  
+  - issn: "1524-1602"
+    name: "STRENGTH AND CONDITIONING JOURNAL"
+    nlm_abbr: "Strength Cond J"
+  
+  - issn: "1650-1977"
+    name: "JOURNAL OF REHABILITATION MEDICINE"
+    nlm_abbr: "J Rehabil Med"
+  
+  - issn: "1080-6032"
+    name: "WILDERNESS & ENVIRONMENTAL MEDICINE"
+    nlm_abbr: "Wilderness Environ Med"
+  
+  - issn: "1089-313X"
+    name: "Journal of Dance Medicine & Science"
+    nlm_abbr: "J Dance Med Sci"
+  
+  - issn: "1063-8652"
+    name: "JOURNAL OF AGING AND PHYSICAL ACTIVITY"
+    nlm_abbr: "J Aging Phys Act"
+  
+  - issn: "1062-8592"
+    name: "SPORTS MEDICINE AND ARTHROSCOPY REVIEW"
+    nlm_abbr: "Sports Med Arthrosc Rev"
+  
+  - issn: "1179-1543"
+    name: "Open Access Journal of Sports Medicine"
+    nlm_abbr: "Open Access J Sports Med"
+  
+  - issn: "1060-1872"
+    name: "OPERATIVE TECHNIQUES IN SPORTS MEDICINE"
+    nlm_abbr: "Oper Tech Sports Med"
+  
+  - issn: "0172-4622"
+    name: "INTERNATIONAL JOURNAL OF SPORTS MEDICINE"
+    nlm_abbr: "Int J Sports Med"
+  
+  - issn: "0270-1367"
+    name: "RESEARCH QUARTERLY FOR EXERCISE AND SPORT"
+    nlm_abbr: "Res Q Exerc Sport"
+  
+  - issn: "1715-5312"
+    name: "Applied Physiology Nutrition and Metabolism"
+    nlm_abbr: "Appl Physiol Nutr Metab"
+  
+  - issn: "2509-3142"
+    name: "German Journal of Exercise and Sport Research"
+    nlm_abbr: "Ger J Exerc Sport Res"
+  
+  - issn: "2080-1297"
+    name: "Baltic Journal of Health and Physical Activity"
+    nlm_abbr: "Balt J Health Phys Act"
+  
+  - issn: "0022-4707"
+    name: "JOURNAL OF SPORTS MEDICINE AND PHYSICAL FITNESS"
+    nlm_abbr: "J Sports Med Phys Fitness"
+  
+  - issn: "2159-2896"
+    name: "International Journal of Sports Physical Therapy"
+    nlm_abbr: "Int J Sports Phys Ther"
+  
+  - issn: "2157-7277"
+    name: "International Journal of Athletic Therapy & Training"
+    nlm_abbr: "Int J Athl Ther Train"
+  
+  - issn: "0894-9115"
+    name: "AMERICAN JOURNAL OF PHYSICAL MEDICINE & REHABILITATION"
+    nlm_abbr: "Am J Phys Med Rehabil"
+  
+  - issn: "0940-6689"
+    name: "PHYSIKALISCHE MEDIZIN REHABILITATIONSMEDIZIN KURORTMEDIZIN"
+    nlm_abbr: "Phys Med Rehabil Kurortmed"
+  
+  - issn: "2379-2868"
+    name: "Translational Journal of the American College of Sports Medicine"
+    nlm_abbr: "Transl J Am Coll Sports Med"
+  
+  - issn: "2214-6873"
+    name: "Asia-Pacific Journal of Sport Medicine Arthroscopy Rehabilitation and Technology"
+    nlm_abbr: "Asia Pac J Sports Med Arthrosc Rehabil Technol"
+  
+  - issn: "1754-3371"
+    name: "Proceedings of the Institution of Mechanical Engineers Part P-Journal of Sports Engineering and Technology"
+    nlm_abbr: "Proc Inst Mech Eng P J Sports Eng Technol"
+  
+  - issn: "0278-5919"
+    name: "CLINICS IN SPORTS MEDICINE"
+    nlm_abbr: "Clin Sports Med"
+  
+  - issn: "1824-7490"
+    name: "Sport Sciences for Health"
+    nlm_abbr: "Sport Sci Health"
+  
+  - issn: "2666-5069"
+    name: "Apunts Sports Medicine"
+    nlm_abbr: "Apunts Sports Med"
+  
+  - issn: "2096-6709"
+    name: "Journal of Science in Sport and Exercise"
+    nlm_abbr: "J Sci Sport Exerc"
+  
+  - issn: "2215-020X"
+    name: "Journal of Sports Analytics"
+    nlm_abbr: "J Sports Anal"
+  
+  - issn: "2300-5076"
+    name: "Physical Activity Review"
+    nlm_abbr: "Phys Act Rev"
+  
+  - issn: "1331-1441"
+    name: "Kinesiology"
+    nlm_abbr: "Kinesiology"
+  
+  - issn: "2300-8822"
+    name: "Archives of Budo Science of Martial Arts and Extreme Sports"
+    nlm_abbr: "Arch Budo Sci Martial Arts Extreme Sports"
+  
+  - issn: "1988-5202"
+    name: "Journal of Human Sport and Exercise"
+    nlm_abbr: "J Hum Sport Exerc"
+  
+  - issn: "2336-4912"
+    name: "Acta Gymnica"
+    nlm_abbr: "Acta Gymnica"
+  
+  - issn: "1855-7171"
+    name: "Science of Gymnastics Journal"
+    nlm_abbr: "Sci Gymn J"
+  
+  - issn: "2255-0461"
+    name: "Revista Iberoamericana de Ciencias de la Actividad Fisica y el Deporte"
+    nlm_abbr: "Rev Iberoam Cienc Act Fis Deporte"
+  
+  - issn: "2386-4095"
+    name: "European Journal of Human Movement"
+    nlm_abbr: "Eur J Hum Mov"
+  
+  - issn: "1659-097X"
+    name: "MHSalud-Revista en Ciencias del Movimiento Humano y la Salud"
+    nlm_abbr: "MHSalud"
+  
+  - issn: "2340-8812"
+    name: "Sport TK-Revista Euroamericana de Ciencias del Deporte"
+    nlm_abbr: "Sport TK"
+  
+  - issn: "1613-0863"
+    name: "Bewegungstherapie und Gesundheitssport"
+    nlm_abbr: "Bewegungsther Gesundheitssport"
+  
+  - issn: "1409-0724"
+    name: "Pensar en Movimiento-Revista de Ciencias del Ejercicio y la Salud"
+    nlm_abbr: "Pensar Mov"
+  
+  - issn: "1318-2269"
+    name: "Kinesiologia Slovenica"
+    nlm_abbr: "Kinesiol Slov"
+  
+  - issn: "2500-0209"
+    name: "Human Sport Medicine"
+    nlm_abbr: "Hum Sport Med"
+  
+  - issn: "1981-9927"
+    name: "RBNE-Revista Brasileira de Nutricao Esportiva"
+    nlm_abbr: "RBNE Rev Bras Nutr Esportiva"
+  
+  - issn: "0120-677X"
+    name: "Educacion Fisica y Deporte"
+    nlm_abbr: "Educ Fis Deporte"
+  
+  - issn: "1885-3137"
+    name: "RICYDE-Revista Internacional de Ciencias del Deporte"
+    nlm_abbr: "RICYDE"
+  
+  - issn: "1800-8755"
+    name: "Montenegrin Journal of Sports Science and Medicine"
+    nlm_abbr: "Monten J Sports Sci Med"
+  
+  - issn: "1840-2976"
+    name: "Acta Kinesiologica"
+    nlm_abbr: "Acta Kinesiol"
+
+# ============================================
+# 质量阈值配置（可选，暂不启用）
+# ============================================
+quality_thresholds:
+  min_impact_factor: 0.0  # 0表示不过滤
+  sci_only: false          # 暂不启用

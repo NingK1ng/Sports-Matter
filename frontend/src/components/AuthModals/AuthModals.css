@@ -1,0 +1,458 @@
+/* Auth Modal Container */
+.auth-modal {
+  background: #fff;
+  padding: 32px;
+  min-width: 400px;
+  max-width: 500px;
+  position: relative;
+  font-family: 'BoutiqueBitmap', monospace;
+  border: 4px solid #2d2d2d;
+  image-rendering: pixelated;
+}
+
+.membership-modal {
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 24px;
+  margin: 0 0 24px;
+  text-align: center;
+  color: #2d2d2d;
+  letter-spacing: 2px;
+}
+
+/* QR Code Container */
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.qr-hint {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+}
+
+.qq-login-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.qq-login-entry {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.qq-login-entry:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.qq-login-img {
+  display: block;
+  height: 24px;
+  width: auto;
+}
+
+/* Loading and Error States */
+.loading-text {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+}
+
+.error-container {
+  padding: 20px;
+}
+
+.error-text {
+  color: #d32f2f;
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fff3f3;
+  border: 2px solid #d32f2f;
+}
+
+.dev-login-section {
+  background: #f0f8ff;
+  border: 2px solid #2d2d2d;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.dev-hint {
+  font-size: 14px;
+  color: #2d2d2d;
+  margin: 0 0 12px;
+  font-weight: bold;
+}
+
+.dev-note {
+  font-size: 12px;
+  color: #666;
+  margin: 16px 0 0;
+  line-height: 1.6;
+  text-align: left;
+}
+
+/* Membership Content */
+.membership-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Membership Tiers Grid */
+.membership-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.membership-tier {
+  position: relative;
+  padding: 20px;
+  border: 3px solid #2d2d2d;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.membership-tier:hover {
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0 #2d2d2d;
+}
+
+.membership-tier.selected {
+  background: #e8f5e8;
+  border-color: #2d8b2d;
+  box-shadow: 4px 4px 0 #2d8b2d;
+}
+
+.tier-badge {
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  background: #ff6b6b;
+  color: #fff;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid #2d2d2d;
+}
+
+.tier-name {
+  margin: 0;
+  font-size: 18px;
+  color: #2d2d2d;
+  font-weight: bold;
+}
+
+.tier-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tier-price {
+  margin: 12px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.price-amount {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2d2d2d;
+}
+
+.price-duration {
+  font-size: 14px;
+  color: #666;
+}
+
+.tier-desc {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #444;
+  line-height: 1.5;
+}
+
+.tier-icon {
+  height: 40px;
+  width: auto;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+}
+
+.tier-features {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+
+.tier-features li {
+  padding: 8px 0;
+  font-size: 13px;
+  color: #444;
+  border-bottom: 1px solid #ddd;
+}
+
+.tier-features li:last-child {
+  border-bottom: none;
+}
+
+/* Invite Code Section */
+.invite-code-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #faf7f2;
+  border: 2px solid #2d2d2d;
+}
+
+.invite-code-section label {
+  font-size: 14px;
+  color: #2d2d2d;
+  font-weight: bold;
+}
+
+.invite-code-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.pixel-input {
+  font-family: 'BoutiqueBitmap', monospace;
+  padding: 8px 12px;
+  border: 2px solid #2d2d2d;
+  background: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.pixel-input:disabled {
+  background: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.pixel-button {
+  font-family: 'BoutiqueBitmap', monospace;
+  padding: 10px 20px;
+  border: 2px solid #2d2d2d;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.pixel-button:hover:not(:disabled) {
+  background: #2d2d2d;
+  color: #fff;
+}
+
+.pixel-button:disabled {
+  background: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.pixel-button-primary {
+  background: #2d8b2d;
+  color: #fff;
+  font-size: 16px;
+  padding: 12px 24px;
+  width: 100%;
+}
+
+.pixel-button-primary:hover:not(:disabled) {
+  background: #257025;
+}
+
+.pixel-button-secondary {
+  background: #f0f0f0;
+  border-color: #666;
+  flex-shrink: 0;
+}
+
+.pixel-button-secondary:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+/* Login Required Notice */
+.login-required-notice {
+  background: #fff9e6;
+  border: 2px solid #ffa500;
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.login-required-notice p {
+  margin: 0;
+  font-size: 14px;
+  color: #2d2d2d;
+  font-weight: bold;
+}
+
+/* Payment Section */
+.payment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.payment-note {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}
+
+.tip-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #2d2d2d;
+  background: #faf7f2;
+}
+
+.tip-success-text {
+  margin: 0;
+  font-size: 13px;
+  color: #2d2d2d;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.tip-success-icon {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.tip-success-img {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border: 2px solid #2d2d2d;
+  background: #fff;
+}
+
+.membership-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #2d2d2d;
+  background: #faf7f2;
+}
+
+.membership-success-text {
+  margin: 0;
+  font-size: 13px;
+  color: #2d2d2d;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.membership-success-img {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border: 2px solid #2d2d2d;
+  background: #fff;
+}
+
+.membership-success-nav {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.membership-success-nav .pixel-button {
+  padding: 8px 12px;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.membership-success-indicator {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Modal Overlay (reuse from existing) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.payment-success-overlay {
+  z-index: 10000;
+}
+
+.payment-success-modal {
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.payment-success-title {
+  margin-bottom: 16px;
+}
+
+.membership-success-popup,
+.tip-success-popup {
+  width: 100%;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
+  color: #2d2d2d;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.modal-close:hover {
+  color: #d32f2f;
+}

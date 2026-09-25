@@ -1,0 +1,277 @@
+  min-height: 100vh;
+  padding: 32px 24px 48px;
+  color: #f5f5f5;
+}
+
+.sj-header {
+  margin: 0 auto 24px;
+  max-width: 1100px;
+  padding: 16px 20px;
+}
+
+.sj-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.sj-subtitle {
+  font-size: 13px;
+  color: #ccc;
+  margin: 0;
+}
+
+.sj-filters,
+.sj-list {
+  margin: 0 auto 24px;
+  max-width: 1100px;
+}
+
+.sj-filter-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sj-filter-row-inline {
+  justify-content: flex-start;
+}
+
+.sj-search-input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: rgba(0, 0, 0, 0.4);
+  color: #f5f5f5;
+}
+
+.sj-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid #fff;
+  background: #222;
+  color: #f5f5f5;
+  cursor: pointer;
+}
+
+.sj-button:hover {
+  background: #333;
+}
+
+.sj-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sj-filter-label {
+  font-size: 13px;
+}
+
+.sj-select {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #111;
+  color: #f5f5f5;
+}
+
+.sj-status {
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.sj-error {
+  color: #ffb4b4;
+}
+
+.sj-list-ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sj-item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.sj-item-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.sj-item-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sj-item-main {
+  flex: 1;
+}
+
+.sj-item-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sj-item-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sj-item-issn {
+  font-size: 12px;
+  color: #bbb;
+}
+
+.sj-item-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sj-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sj-item-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sj-stat-block {
+  text-align: right;
+}
+
+.sj-stat-label {
+  font-size: 10px;
+  color: #aaa;
+}
+
+.sj-stat-value {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sj-toggle-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: #222;
+  color: #f5f5f5;
+  cursor: pointer;
+}
+
+.sj-item-detail {
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  padding: 12px 14px 10px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.sj-detail-section {
+  margin-bottom: 12px;
+}
+
+.sj-detail-title {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.sj-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 16px;
+  font-size: 12px;
+}
+
+.sj-detail-row {
+  color: #ddd;
+}
+
+.sj-link-row {
+  font-size: 12px;
+  color: #9cd5ff;
+  text-decoration: underline;
+}
+
+.sj-paper-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sj-paper-item {
+  margin-bottom: 8px;
+}
+
+.sj-paper-title {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.sj-paper-meta {
+  font-size: 12px;
+  color: #ccc;
+}
+
+.sj-paper-links {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.sj-paper-link {
+  font-size: 11px;
+  color: #9cd5ff;
+  text-decoration: underline;
+}
+
+.sj-paper-more {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.sj-paper-more a {
+  color: #9cd5ff;
+  text-decoration: underline;
+}
+
+.sj-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.sj-page-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: #222;
+  color: #f5f5f5;
+  cursor: pointer;
+}
+
+.sj-page-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sj-page-info {
+  font-size: 12px;
+}

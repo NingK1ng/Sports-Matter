@@ -1,0 +1,35 @@
+{
+  "name": "@sports-matter/translation",
+  "version": "1.0.0",
+  "description": "离线翻译服务组件（ONNX Runtime Web）",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "onnxruntime-web": "^1.17.0",
+    "localforage": "^1.10.0"
+  },
+  "devDependencies": {
+    "react-scripts": "^5.0.1",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

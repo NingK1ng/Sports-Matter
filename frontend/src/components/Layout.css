@@ -1,0 +1,182 @@
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8f5f0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    #ebe5dc 0px,
+    #ebe5dc 2px,
+    transparent 2px,
+    transparent 20px
+  );
+}
+
+.header {
+  background: #ffffff;
+  border-bottom: 2px solid #8b7355;
+  box-shadow: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.layout-header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 8px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.nav-logo:hover {
+  opacity: 0.8;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-direction: row;
+}
+
+.logo-home {
+  width: 32px;
+  height: 32px;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.logo-bird {
+  width: 32px;
+  height: 32px;
+  background-image: url('/sprites/bird-fly-row.png');
+  background-repeat: no-repeat;
+  background-size: 256px 32px; /* 8 帧，每帧约32px */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  animation: bird-fly 0.8s steps(8) infinite;
+}
+
+@keyframes bird-fly {
+  from { background-position: 0 0; }
+  to { background-position: -256px 0; }
+}
+
+.logo-text {
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 14px;
+  font-weight: 400;
+  color: #2d2d2d;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.layout-auth {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.layout-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 2px solid #2d2d2d;
+  background: #f9f9f9;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 14px;
+}
+
+.layout-user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #2d2d2d;
+}
+
+.layout-membership-icon {
+  height: 20px;
+  width: auto;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+
+.nav-link {
+  padding: 5px 10px;
+  text-decoration: none;
+  color: #2d2d2d;
+  border: 2px solid #8b7355;
+  border-radius: 0;
+  background: #f8f5f0;
+  box-shadow: none;
+  transition: transform 0.2s ease, background 0.2s ease;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-weight: 400;
+  font-size: 13px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.nav-link:hover {
+  background: #f4e4c7;
+  transform: translateY(-1px);
+}
+
+.nav-link.active {
+  background: #e8d7b9;
+  color: #2d2d2d;
+}
+
+.nav-link:active {
+  transform: scale(0.98);
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid #8b7355;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-link { transition: none; }
+}
+
+.main-content {
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--px-color-warning, #f7d51d);
+  color: var(--px-color-base);
+  font-size: 10px;
+  padding: 2px 6px;
+  border: 2px solid var(--px-color-base);
+  box-shadow: 2px 2px 0 0 var(--px-color-base);
+  margin-left: 6px;
+  font-weight: 400;
+  vertical-align: middle;
+}

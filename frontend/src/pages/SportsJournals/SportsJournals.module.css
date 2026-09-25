@@ -1,0 +1,140 @@
+@import '../LiteratureStream/LiteratureStream.module.css';
+
+/* 复用LiteratureStream的大部分样式，必要时可以在此处做覆盖定制 */
+
+.journalRow {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.journalMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.journalTrend {
+  width: 460px;
+  min-width: 360px;
+  max-width: 520px;
+  display: flex;
+  align-items: stretch;
+}
+
+.journalTrendCard {
+  width: 100%;
+  padding: 12px;
+  background: rgba(232, 215, 185, 0.18);
+  border: 2px solid #8b7355;
+  border-radius: 0;
+  box-shadow: 2px 2px #1a1a1a;
+  box-sizing: border-box;
+}
+
+.journalTrendTitle {
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  color: #2d2d2d;
+  margin-bottom: 8px;
+}
+
+.journalTrendEmpty {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  color: #8b7355;
+}
+
+.tagLink {
+  cursor: pointer;
+  background: rgba(232, 215, 185, 0.6);
+}
+
+.tagLink:hover {
+  transform: translateY(-1px);
+  background: rgba(244, 228, 199, 0.5);
+}
+
+@media (max-width: 980px) {
+  .journalRow {
+    flex-direction: column;
+  }
+
+  .journalTrend {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+.articleAbstract {
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 18px;
+}
+
+.sectionHeader {
+  display: inline-block;
+  padding: 4px 10px;
+  margin-bottom: 8px;
+  border: 2px solid #8b7355;
+  border-radius: 4px;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 12px;
+  color: #2d2d2d;
+  background: rgba(232, 215, 185, 0.6);
+}
+
+.sectionBody {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.articleAbstractTitle {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.articleAbstractTitle a {
+  color: #1a4a7a;
+  text-decoration: none;
+}
+
+.articleAbstractTitle a:hover {
+  text-decoration: underline;
+}
+
+.paginationWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pageButton {
+  padding: 6px 14px;
+  border-radius: 0;
+  border: 2px solid #8b7355;
+  background: rgba(232, 215, 185, 0.6);
+  color: #2d2d2d;
+  cursor: pointer;
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 13px;
+  box-shadow: 2px 2px #1a1a1a;
+}
+
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pageInfo {
+  font-size: 12px;
+  color: #2d2d2d;
+}

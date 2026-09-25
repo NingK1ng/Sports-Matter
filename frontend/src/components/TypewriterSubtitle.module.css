@@ -1,0 +1,21 @@
+.subtitle {
+  font-family: 'BoutiqueBitmap', monospace;
+  font-size: 14px;
+  color: #8b7355;
+  text-align: center;
+  min-height: 20px;
+  letter-spacing: 1px;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.cursor {
+  animation: blink 1s infinite;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}

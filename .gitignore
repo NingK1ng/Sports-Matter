@@ -1,0 +1,49 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+
+# Database exports and generated data
+backup/
+data/*
+!data/sports_journals_enriched.json
+*.dump
+*.sql.gz
+*.tar.gz
+*.db
+*.sqlite*
+checkpoint_*.json
+test_results_*.json
+uvicorn.out
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+*.egg-info/
+
+# Frontend
+node_modules/
+dist/
+build/
+frontend/.vite/
+
+# Local files
+.DS_Store
+.idea/
+.vscode/
+*.log
+logs/
+
+# Private backup and third-party source copies
+Youtu-agent/
+agent-framework-main/
+youtu-graphrag/

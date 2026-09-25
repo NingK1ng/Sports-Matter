@@ -1,0 +1,17 @@
+:root {
+  --px-font-ui: var(--px-font-body);
+  --px-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  /* Backward compat */
+  --px-font-family: var(--px-font-body);
+
+  --px-color-white: #ffffff;
+  --px-color-base: #212529;
+  --px-color-primary: #209cee;
+  --px-color-primary-dark-1: #108de0;
+  --px-color-info: #c8c9cc;
+
+  --px-bg-color-page: #f2f3f5;
+  --px-bg-color-overlay: #ffffff;
+
+  --px-border-color: #4c4d4f;
+}

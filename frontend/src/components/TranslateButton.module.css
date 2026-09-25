@@ -1,0 +1,21 @@
+/* 翻译按钮样式 - 复用现有样式 */
+
+.translateBtn {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.translateBtn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.translateBtn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}

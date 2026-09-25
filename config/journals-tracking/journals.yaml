@@ -1,0 +1,179 @@
+# 期刊配置文件
+# 用于模块2：顶刊追踪
+# 基于 openspec/changes/add-journals-tracking/JOURNAL_URLS.md 和 Crossref API查询结果
+
+journals:
+  # ==========================================
+  # 运动科学顶刊（4本）
+  # ==========================================
+  - issn_l: "0363-5465"
+    issn_print: "0363-5465"
+    issn_electronic: "1552-3365"
+    full_name: "The American Journal of Sports Medicine"
+    short_name: "AJSM"
+    display_name: "AJSM"
+    category: "sports_science"
+    estimated_if: 5.2
+    publisher: "SAGE Publications"
+    website_url: "https://journals.sagepub.com/home/ajs"
+  
+  - issn_l: "2095-2546"
+    issn_print: "2095-2546"
+    issn_electronic: "2213-2961"
+    full_name: "Journal of Sport and Health Science"
+    short_name: "JSHS"
+    display_name: "JSHS"
+    category: "sports_science"
+    estimated_if: 9.7
+    publisher: "Elsevier"
+    website_url: "https://www.sciencedirect.com/journal/journal-of-sport-and-health-science"
+  
+  - issn_l: "0306-3674"
+    issn_print: "0306-3674"
+    issn_electronic: "1473-0480"
+    full_name: "British Journal of Sports Medicine"
+    short_name: "BJSM"
+    display_name: "BJSM"
+    category: "sports_science"
+    estimated_if: 18.4
+    publisher: "BMJ"
+    website_url: "https://bjsm.bmj.com"
+  
+  - issn_l: "0112-1642"
+    issn_print: "0112-1642"
+    issn_electronic: "1179-2035"
+    full_name: "Sports Medicine"
+    short_name: "Sports Medicine"
+    display_name: "Sports Medicine"
+    category: "sports_science"
+    estimated_if: 12.3
+    publisher: "Springer-Verlag"
+    website_url: "https://link.springer.com/journal/40279"
+  
+  # ==========================================
+  # CNS主刊（3本）
+  # ==========================================
+  - issn_l: "0028-0836"
+    issn_print: "0028-0836"
+    issn_electronic: "1476-4687"
+    full_name: "Nature"
+    short_name: "Nature"
+    display_name: "Nature"
+    category: "cns"
+    estimated_if: 64.8
+    publisher: "Springer Nature"
+    website_url: "https://www.nature.com"
+  
+  - issn_l: "0092-8674"
+    issn_print: "0092-8674"
+    issn_electronic: "1097-4172"
+    full_name: "Cell"
+    short_name: "Cell"
+    display_name: "Cell"
+    category: "cns"
+    estimated_if: 64.5
+    publisher: "Elsevier"
+    website_url: "https://www.cell.com"
+  
+  - issn_l: "0036-8075"
+    issn_print: "0036-8075"
+    issn_electronic: "1095-9203"
+    full_name: "Science"
+    short_name: "Science"
+    display_name: "Science"
+    category: "cns"
+    estimated_if: 56.9
+    publisher: "AAAS"
+    website_url: "https://www.science.org"
+  
+  # PNAS（综合顶刊扩展）
+  - issn_l: "0027-8424"
+    issn_print: "0027-8424"
+    issn_electronic: "1091-6490"
+    full_name: "Proceedings of the National Academy of Sciences of the United States of America"
+    short_name: "PNAS"
+    display_name: "PNAS"
+    category: "cns"
+    estimated_if: 9.1
+    publisher: "National Academy of Sciences (United States)"
+    website_url: "https://www.pnas.org"
+  
+  # ==========================================
+  # CNS子刊（6本）
+  # ==========================================
+  - issn_l: "1078-8956"
+    issn_print: "1078-8956"
+    issn_electronic: "1546-170X"
+    full_name: "Nature Medicine"
+    short_name: "Nat Med"
+    display_name: "Nature Medicine"
+    category: "cns"
+    estimated_if: 82.9
+    publisher: "Springer Nature"
+    website_url: "https://www.nature.com/nm/"
+  
+  - issn_l: "1097-6256"
+    issn_print: "1097-6256"
+    issn_electronic: "1546-1726"
+    full_name: "Nature Neuroscience"
+    short_name: "Nat Neurosci"
+    display_name: "Nature Neuroscience"
+    category: "cns"
+    estimated_if: 28.7
+    publisher: "Springer Nature"
+    website_url: "https://www.nature.com/neuro/"
+  
+  - issn_l: "1074-7613"
+    issn_print: "1074-7613"
+    issn_electronic: "1097-4180"
+    full_name: "Immunity"
+    short_name: "Immunity"
+    display_name: "Immunity"
+    category: "cns"
+    estimated_if: 32.4
+    publisher: "Elsevier"
+    website_url: "https://www.cell.com/immunity/home"
+  
+  - issn_l: "2522-5812"
+    issn_print: null
+    issn_electronic: "2522-5812"
+    full_name: "Nature Metabolism"
+    short_name: "Nat Metab"
+    display_name: "Nature Metabolism"
+    category: "cns"
+    estimated_if: 20.8
+    publisher: "Springer Nature"
+    website_url: "https://www.nature.com/natmetab"
+  
+  - issn_l: "1548-7091"
+    issn_print: "1548-7091"
+    issn_electronic: "1548-7105"
+    full_name: "Nature Methods"
+    short_name: "Nat Methods"
+    display_name: "Nature Methods"
+    category: "cns"
+    estimated_if: 47.8
+    publisher: "Springer Nature"
+    website_url: "https://www.nature.com/nmeth"
+
+  - issn_l: "2041-1723"
+    issn_print: null
+    issn_electronic: "2041-1723"
+    full_name: "Nature Communications"
+    short_name: "Nat Commun"
+    display_name: "Nature Communications"
+    category: "cns"
+    estimated_if: 16.6
+    publisher: "Springer Nature"
+    website_url: "https://www.nature.com/ncomms/"
+  
+  - issn_l: "2375-2548"
+    issn_print: "2375-2548"
+    issn_electronic: "2375-2548"
+    full_name: "Science Advances"
+    short_name: "Sci Adv"
+    display_name: "Science Advances"
+    category: "cns"
+    estimated_if: 13.6
+    publisher: "AAAS"
+    website_url: "https://www.science.org/journal/sciadv"
