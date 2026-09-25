@@ -1,7 +1,5 @@
 <div align="center">
-  <img src="docs/assets/blue-bird.gif" alt="Sports Matter 的蓝色像素飞鸟" width="80" height="80">
-
-  <h1><img src="docs/assets/sports-matter-wordmark.png" alt="Sports Matter!" width="900"></h1>
+  <h1><img src="docs/assets/blue-bird.gif" alt="Sports Matter 的蓝色像素飞鸟" width="80" height="80" align="middle"> <img src="docs/assets/sports-matter-wordmark.png" alt="Sports Matter!" width="820" align="middle"></h1>
 
   <h3>Sports matter, so does their research.</h3>
 
