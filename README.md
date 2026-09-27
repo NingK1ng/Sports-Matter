@@ -16,3 +16,7 @@
     <img alt="React 18" src="https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white">
   </p>
 </div>
+
+<p align="center">
+  <img src="docs/assets/sports-matter-demo-0.75x.gif" alt="Sports Matter 功能演示" width="916">
+</p>
