@@ -17,6 +17,11 @@
   </p>
 </div>
 
+Sports-Matter is a nonprofit website dedicated to sports science research.
+
+- Visit our website for more 👉 [sports-matter.com](https://sports-matter.com)
+- Read the [full introduction](https://mp.weixin.qq.com/s/2WzO09YRaDXTlEK2h994kw).
+
 <p align="center">
   <img src="docs/assets/sports-matter-demo.gif" alt="Sports Matter 功能演示" width="916">
 </p>
