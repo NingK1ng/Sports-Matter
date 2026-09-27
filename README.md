@@ -18,5 +18,5 @@
 </div>
 
 <p align="center">
-  <img src="docs/assets/sports-matter-demo-0.75x.gif" alt="Sports Matter 功能演示" width="916">
+  <img src="docs/assets/sports-matter-demo.gif" alt="Sports Matter 功能演示" width="916">
 </p>
