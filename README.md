@@ -20,7 +20,9 @@
 Sports-Matter is a nonprofit website dedicated to sports science research.
 
 - Visit our website for more 👉 [sports-matter.com](https://sports-matter.com)
-- [![WeChat: Full introduction](https://img.shields.io/badge/WeChat-Full_introduction-07C160?style=flat-square&logo=wechat&logoColor=white)](https://mp.weixin.qq.com/s/2WzO09YRaDXTlEK2h994kw)
+- <img src="https://cdn.simpleicons.org/wechat/07C160" alt="WeChat" width="18" height="18"> Read the [full introduction](https://mp.weixin.qq.com/s/2WzO09YRaDXTlEK2h994kw).
+
+A few examples of the site's features:
 
 <p align="center">
   <img src="docs/assets/sports-matter-demo.gif" alt="Sports Matter 功能演示" width="916">
