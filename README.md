@@ -24,6 +24,9 @@ Sports-Matter is a nonprofit website dedicated to sports science research.
 
 A few examples of the site's features:
 
+> ⏳ **Animated demo · 24.5 MB**<br>
+> The GIF below may take a moment to load. [Open the GIF directly](https://raw.githubusercontent.com/NingK1ng/Sports-Matter/main/docs/assets/sports-matter-demo.gif).
+
 <p align="center">
-  <img src="docs/assets/sports-matter-demo.gif" alt="Sports Matter 功能演示" width="916">
+  <img src="docs/assets/sports-matter-demo.gif" alt="Sports Matter animated feature demo — please allow a moment for the GIF to load." width="916" height="504">
 </p>
