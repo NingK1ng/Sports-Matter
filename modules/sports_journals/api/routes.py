@@ -10,7 +10,6 @@ from sqlalchemy import Integer, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from modules.literature_pool.api.auth import is_member_user
 from modules.literature_stream.models.literature import Literature
 from modules.literature_stream.models.literature import JournalMetadata
 from modules.sports_journals.models.dto import (
@@ -21,7 +20,6 @@ from modules.sports_journals.services.service import (
     get_journal_detail,
     list_journals,
 )
-from modules.literature_pool.api.auth import require_login_user
 
 
 router = APIRouter(prefix="/sports-journals", tags=["sports-journals"])
@@ -227,18 +225,12 @@ async def list_sports_journals(
     page: int = Query(1, ge=1, description="页码，从1开始"),
     per_page: int = Query(10, ge=1, le=100, description="每页数量"),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_login_user),
 ) -> SportsJournalListResponse:
     """Return paginated list of sports journals.
 
     All filtering is done in memory based on local JSON data.
     """
 
-    if category == "high_volume" and not is_member_user(user):
-        raise HTTPException(
-            status_code=403,
-            detail={"code": "MEMBERSHIP_REQUIRED", "message": "会员才能解锁「文献上新高频期刊」"},
-        )
 
     resp = list_journals(
         q=q,
@@ -255,7 +247,6 @@ async def list_sports_journals(
 @router.get("/{journal_id}", response_model=SportsJournalDetail)
 async def get_sports_journal_detail(
     journal_id: str,
-    _user=Depends(require_login_user),
 ) -> SportsJournalDetail:
     """Return detailed info for a single journal."""
 

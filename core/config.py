@@ -100,6 +100,7 @@ class Settings(BaseSettings):
 
     crossref_email: Optional[str] = Field(default=None, alias="CROSSREF_EMAIL")
     openalex_email: Optional[str] = Field(default=None, alias="OPENALEX_EMAIL")
+    openalex_api_key: Optional[str] = Field(default=None, alias="OPENALEX_API_KEY")
 
     deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
     deepseek_base_url: str = Field(

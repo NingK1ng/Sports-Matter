@@ -54,7 +54,8 @@ function ArticleItem({ article, index }) {
       })
 
       if (!response.ok) {
-        throw new Error(`翻译失败: ${response.statusText}`)
+        const failure = await response.json().catch(() => ({}))
+        throw new Error(failure.detail?.message || failure.detail || `翻译失败: ${response.status}`)
       }
 
       const result = await response.json()

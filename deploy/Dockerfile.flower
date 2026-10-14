@@ -1,0 +1,7 @@
+ARG APP_IMAGE=sports-matter-api:latest
+FROM ${APP_IMAGE}
+RUN python -m pip install --no-cache-dir flower==2.2.0
+# Bind the published port to 127.0.0.1, or configure authentication before public access.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5555/healthcheck', timeout=5)"
+CMD ["celery", "-A", "core.queue", "flower", "--port=5555"]

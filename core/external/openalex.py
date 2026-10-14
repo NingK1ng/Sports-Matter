@@ -21,6 +21,8 @@ class OpenAlexClient(BaseAPIClient):
             cache_ttl=86400,
         )
         self.email = settings.openalex_email
+        if settings.openalex_api_key:
+            self.client.headers["Authorization"] = f"Bearer {settings.openalex_api_key}"
 
     async def get_citations(
         self,

@@ -192,7 +192,7 @@ function SubscriptionManager({
     <div className={styles.subscriptionManager}>
       <div className={styles.subscriptionHeader}>
         <h2>我的订阅</h2>
-        {subscriptions.length < 3 && (
+        {(
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
             className={styles.createBtn}

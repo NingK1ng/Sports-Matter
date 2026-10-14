@@ -16,7 +16,9 @@ from celery import shared_task
 from sqlalchemy import select, update, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
+from core.task_runtime import run_async
 from core.config import settings
 from core.cache import init_cache
 from core.external.deepseek import DEEPSEEK_V4_FLASH_MODEL, get_deepseek_client
@@ -28,6 +30,7 @@ from modules.journals.services.cns_sports_filter import build_candidate_tsquery_
 async_engine = create_async_engine(
     settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
     echo=False,
+    poolclass=NullPool,
 )
 AsyncSessionLocal = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -40,13 +43,14 @@ def enrich_missing_abstracts(limit: int | None = None, concurrency: int | None =
     Args:
         limit: 最多处理多少篇（None=全量）
     """
-    return asyncio.run(_async_enrich_missing_abstracts(limit))
+    return run_async(_async_enrich_missing_abstracts(limit, concurrency))
 
 
 async def _async_enrich_missing_abstracts(limit: int | None = None, concurrency: int | None = None) -> Dict[str, Any]:
     processed = 0
     updated = 0
     failed = 0
+    run_processed = 0
     batch_size = 2000  # 更大批次减少往返开销
     max_concurrency = concurrency or int(os.getenv("ENRICH_CONCURRENCY", "30"))
     ckpt_path = Path("logs") / "enrich_pubmed.ckpt.json"
@@ -109,7 +113,10 @@ async def _async_enrich_missing_abstracts(limit: int | None = None, concurrency:
                     )
                 )
 
-            stmt = base.order_by(JournalArticle.id.asc()).limit(batch_size)
+            remaining = batch_size if limit is None else min(batch_size, max(0, limit - run_processed))
+            if remaining == 0:
+                break
+            stmt = base.order_by(JournalArticle.id.asc()).limit(remaining)
             result = await session.execute(stmt)
             articles = result.scalars().all()
             if not articles:
@@ -153,6 +160,7 @@ async def _async_enrich_missing_abstracts(limit: int | None = None, concurrency:
             # 记录 last_id（本批最大id）与进度
             last_id = articles[-1].id
             processed += len(articles)
+            run_processed += len(articles)
 
             # 写checkpoint
             try:
@@ -169,7 +177,7 @@ async def _async_enrich_missing_abstracts(limit: int | None = None, concurrency:
             except Exception:
                 pass
 
-            if limit is not None and processed >= limit:
+            if limit is not None and run_processed >= limit:
                 break
 
     result_payload = {
@@ -202,7 +210,7 @@ def classify_cns_sports_related(
     - LLM 判定：对候选集合做二分类，排除“模型训练/系统性能”等误召回，同时尽量不漏掉潜在相关；
     - 结果缓存：写入 journal_articles.extra_metadata，前端查询时只做 SQL 过滤。
     """
-    return asyncio.run(_async_classify_cns_sports_related(limit, fetch_batch_size, llm_batch_size))
+    return run_async(_async_classify_cns_sports_related(limit, fetch_batch_size, llm_batch_size))
 
 
 def _build_cns_sports_prompt(items: list[dict]) -> str:

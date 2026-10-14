@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from modules.literature_pool.api.auth import get_current_user, consume_daily_quota
 from core.database import get_db
 from core.services.batch_translator import BatchTranslator
 
@@ -90,7 +91,8 @@ class TranslateAbstractResponse(BaseModel):
 @router.post("/titles", response_model=TranslateTitlesResponse)
 async def translate_titles(
     request: TranslateTitlesRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
 ):
     """
     批量翻译文献标题（使用DeepSeek-Chat）
@@ -129,7 +131,7 @@ async def translate_titles(
         pmids = request.pmids[:50]  # 限制批量大小
 
         # 查询已缓存的翻译数量
-        from sqlalchemy import select, func
+        from sqlalchemy import select, func, or_
         from modules.literature_stream.models.literature import Literature
 
         cached_query = select(func.count()).where(
@@ -138,6 +140,11 @@ async def translate_titles(
         )
         cached_result = await db.execute(cached_query)
         cached_count = cached_result.scalar() or 0
+
+        missing = await db.scalar(select(func.count()).where(
+            Literature.pmid.in_(pmids), or_(Literature.title_zh.is_(None), func.length(func.trim(Literature.title_zh)) == 0)))
+        if missing:
+            await consume_daily_quota(db, user, "literature_translate")
 
         # 执行翻译（自动跳过已缓存）
         try:
@@ -171,7 +178,7 @@ async def translate_titles(
         article_ids = request.article_ids[:50]  # 限制批量大小
 
         # 查询已缓存的翻译数量
-        from sqlalchemy import select, func
+        from sqlalchemy import select, func, or_
         from modules.journals.models.journal import JournalArticle
 
         cached_query = select(func.count()).where(
@@ -180,6 +187,11 @@ async def translate_titles(
         )
         cached_result = await db.execute(cached_query)
         cached_count = cached_result.scalar() or 0
+
+        missing = await db.scalar(select(func.count()).where(
+            JournalArticle.id.in_(article_ids), or_(JournalArticle.title_zh.is_(None), func.length(func.trim(JournalArticle.title_zh)) == 0)))
+        if missing:
+            await consume_daily_quota(db, user, "journals_translate")
 
         # 执行翻译（自动跳过已缓存）
         try:
@@ -212,7 +224,8 @@ async def translate_titles(
 @router.post("/abstract", response_model=TranslateAbstractResponse)
 async def translate_abstract(
     request: TranslateAbstractRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
 ):
     """
     翻译单个文献摘要（使用DeepSeek-Chat，按需翻译）
@@ -290,6 +303,9 @@ async def translate_abstract(
                 abstract_zh=cached_translation,
                 cached=True
             )
+
+    await consume_daily_quota(db, user,
+        "literature_translate" if request.source_type == "literature" else "journals_translate")
 
     # 执行翻译并缓存
     try:

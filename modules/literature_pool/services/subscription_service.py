@@ -1,7 +1,7 @@
 """
 Subscription Service - 订阅管理服务
 
-实现订阅CRUD和3个订阅限制
+实现匿名访客的订阅CRUD
 """
 from typing import List, Optional
 from sqlalchemy import select, func, delete
@@ -15,7 +15,6 @@ from modules.literature_pool.models.article import PoolArticle
 class SubscriptionService:
     """订阅服务"""
     
-    MAX_SUBSCRIPTIONS_PER_USER = 3
     
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -96,13 +95,6 @@ class SubscriptionService:
         Raises:
             ValueError: 超过订阅数量限制
         """
-        # 检查订阅数量限制
-        count = await self.count_user_subscriptions(user_id)
-        if count >= self.MAX_SUBSCRIPTIONS_PER_USER:
-            raise ValueError(
-                f"SUBSCRIPTION_LIMIT_EXCEEDED: 每个用户最多{self.MAX_SUBSCRIPTIONS_PER_USER}个订阅"
-            )
-        
         # 创建订阅
         subscription = PoolSubscription(
             user_id=user_id,

@@ -9,9 +9,11 @@ import logging
 import json
 import os
 from pathlib import Path
+from functools import wraps
 
 import httpx
 from core.config import settings
+from core.task_lock import task_lock
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
@@ -29,6 +31,16 @@ from modules.journals.services.label_calculator import LabelCalculator
 from modules.journals.services.research_filter import get_research_filter
 
 logger = logging.getLogger(__name__)
+
+
+def _single_journal_run(method):
+    @wraps(method)
+    async def wrapped(self, issn_l, *args, **kwargs):
+        with task_lock(f"journal:{issn_l}", ttl=3700) as acquired:
+            if not acquired:
+                return {"total": 0, "new": 0, "updated": 0, "status": "already_running"}
+            return await method(self, issn_l, *args, **kwargs)
+    return wrapped
 
 
 class JournalCrawler:
@@ -69,6 +81,7 @@ class JournalCrawler:
             )
             return None
 
+    @_single_journal_run
     async def incremental_crawl(
         self,
         issn_l: str,
@@ -108,6 +121,7 @@ class JournalCrawler:
         )
         self.session.add(log)
         await self.session.commit()
+        log_id = log.id
         
         try:
             # 获取期刊元数据
@@ -206,9 +220,15 @@ class JournalCrawler:
         
         except Exception as e:
             logger.error(f"❌ 增量爬取失败: {issn_l}, {e}")
-            log.status = "failed"
-            log.error_message = str(e)
-            log.finished_at = datetime.now(timezone.utc)
+            # A deadlock or constraint error aborts the transaction. Roll back
+            # first, then record failure in a new transaction without advancing state.
+            await self.session.rollback()
+            await self.session.execute(
+                update(CrawlTaskLog).where(CrawlTaskLog.id == log_id).values(
+                    status="failed", error_message=str(e)[:4000],
+                    finished_at=datetime.now(timezone.utc),
+                )
+            )
             await self.session.commit()
             raise
 
@@ -249,6 +269,7 @@ class JournalCrawler:
         )
         self.session.add(log)
         await self.session.commit()
+        log_id = log.id
         
         try:
             # 获取期刊元数据
@@ -293,9 +314,15 @@ class JournalCrawler:
         
         except Exception as e:
             logger.error(f"❌ 历史回填失败: {issn_l}, {e}")
-            log.status = "failed"
-            log.error_message = str(e)
-            log.finished_at = datetime.now(timezone.utc)
+            # A deadlock or constraint error aborts the transaction. Roll back
+            # first, then record failure in a new transaction without advancing state.
+            await self.session.rollback()
+            await self.session.execute(
+                update(CrawlTaskLog).where(CrawlTaskLog.id == log_id).values(
+                    status="failed", error_message=str(e)[:4000],
+                    finished_at=datetime.now(timezone.utc),
+                )
+            )
             await self.session.commit()
             raise
 

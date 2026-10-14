@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from modules.literature_pool.api.auth import require_member_user
+from modules.literature_pool.api.auth import get_current_user
 from modules.literature_pool.services.subscription_service import SubscriptionService
 from modules.literature_pool.schemas.subscription import (
     SubscriptionCreate,
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 
 @router.get("", response_model=SubscriptionListResponse)
 async def get_subscriptions(
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -82,7 +82,7 @@ async def get_subscriptions(
 @router.get("/{subscription_id}", response_model=SubscriptionResponse)
 async def get_subscription(
     subscription_id: int,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -109,7 +109,7 @@ async def get_subscription(
 @router.post("", response_model=SubscriptionResponse, status_code=201)
 async def create_subscription(
     data: SubscriptionCreate,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -152,7 +152,7 @@ async def create_subscription(
 async def update_subscription(
     subscription_id: int,
     data: SubscriptionUpdate,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -187,7 +187,7 @@ async def update_subscription(
 @router.delete("/{subscription_id}", status_code=204)
 async def delete_subscription(
     subscription_id: int,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -210,7 +210,7 @@ async def delete_subscription(
 @router.post("/{subscription_id}/refresh", status_code=200)
 async def refresh_subscription(
     subscription_id: int,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """

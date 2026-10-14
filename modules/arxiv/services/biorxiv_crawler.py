@@ -5,7 +5,7 @@ L1 层：BioRxiv 官方 API 按日期范围抓取预印本
 API 文档参考：https://api.biorxiv.org/
 本实现使用 details 接口：
   https://api.biorxiv.org/details/biorxiv/YYYY-MM-DD/YYYY-MM-DD/0
-并按 cursor 递增分页，直到返回空集合。
+并按 cursor 递增分页，校验完整性后才报告成功。
 
 注意：
 - 为了复用 arxiv_articles 表结构，这里将 BioRxiv 记录也映射为 article dict，
@@ -56,6 +56,10 @@ class BiorxivRecord:
             return datetime.strptime(self.date_str, "%Y-%m-%d").date()
         except Exception:
             return None
+
+
+class BiorxivAPIError(RuntimeError):
+    """An upstream failure, never a successful empty result."""
 
 
 class BiorxivCrawler:
@@ -160,88 +164,44 @@ class BiorxivCrawler:
         }
 
     def _fetch_page(self, date_from: str, date_to: str, cursor: int) -> Tuple[List[Dict], Dict]:
-        """调用 BioRxiv details API 获取一页记录及分页元数据。
-
-        返回:
-            (collection, meta) 元组，其中 meta 至少包含:
-            - total: 当前日期区间内 API 报告的总记录数（含多版本）
-            - count: 当前页记录数
-            - count_new_papers: 当前区间内新论文总数（按 DOI 去重）
-            - cursor: 本次请求使用的游标
-            - interval: 本次请求的日期区间字符串
-
-        注意：
-            - 为了避免将临时的网络/SSL问题误判为“无更多数据”，这里在失败时会重试多次；
-            - 若多次重试后仍失败，则抛出异常，由上层任务整体失败并记录日志，避免静默丢数。
-        """
-        url = f"{BIORXIV_API_BASE}/{date_from}/{date_to}/{cursor}"
-        logger.info(f"BioRxiv L1请求：{url}")
-
-        last_error: Optional[Exception] = None
+        url = f"{BIORXIV_API_BASE}/{date_from}/{date_to}/{cursor}/json"
+        last_error = None
         for attempt in range(3):
             try:
-                resp = httpx.get(url, timeout=30.0)
+                resp = httpx.get(url, timeout=30.0, follow_redirects=True,
+                                 headers={"Accept": "application/json", "User-Agent": "SportsMatter/1.0 (+https://sports-matter.com)"})
                 resp.raise_for_status()
-                break
-            except Exception as e:
-                last_error = e
-                logger.error(
-                    f"BioRxiv 请求失败（cursor={cursor}，第{attempt + 1}次尝试）: {e}"
-                )
-                # 前两次失败时短暂停顿后重试，第三次仍失败则抛出异常
+                if not resp.content.strip():
+                    raise ValueError("HTTP 200 returned an empty body")
+                data = resp.json()
+                if not isinstance(data, dict):
+                    raise ValueError("JSON root is not an object")
+                messages, collection = data.get("messages"), data.get("collection")
+                if not isinstance(messages, list) or not messages or not isinstance(messages[0], dict):
+                    raise ValueError("Missing pagination metadata")
+                meta = dict(messages[0])
+                status = str(meta.get("status", "")).lower()
+                # The documented no-results response may omit pagination fields.
+                if status == "no papers found" and collection == [] and cursor == 0:
+                    return [], {"total": 0, "count": 0, "cursor": 0}
+                if status != "ok" or not isinstance(collection, list):
+                    raise ValueError(f"Invalid API result status: {status}")
+                for field in ("total", "cursor", "count"):
+                    meta[field] = int(meta[field])
+                if meta["cursor"] != cursor or meta["total"] < 0 or meta["count"] != len(collection) or meta["total"] < cursor + len(collection):
+                    raise ValueError("Inconsistent pagination metadata")
+                if not collection and cursor < meta["total"]:
+                    raise ValueError("Empty page before the reported end of results")
+                if any(not isinstance(item, dict) or not item.get("doi") or not item.get("date") for item in collection):
+                    raise ValueError("Incomplete article records")
+                return collection, meta
+            except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+                last_error = exc
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+                    break  # Never sleep for a provider's day-long Retry-After.
                 if attempt < 2:
-                    time.sleep(2)
-                else:
-                    raise
-
-        try:
-            data = resp.json()
-        except Exception as e:
-            logger.error(f"BioRxiv 响应解析失败（cursor={cursor}）: {e}")
-            # JSON 解析失败通常意味着本页数据不可用，直接抛出异常让上层感知失败
-            raise
-
-        collection = data.get("collection") or []
-        messages = data.get("messages") or []
-
-        meta: Dict = {
-            "total": 0,
-            "count": len(collection),
-            "count_new_papers": 0,
-            "cursor": cursor,
-            "interval": f"{date_from}:{date_to}",
-        }
-
-        if messages:
-            msg0 = messages[0] or {}
-            # total: 区间内总记录数（含多版本）
-            try:
-                if msg0.get("total") is not None:
-                    meta["total"] = int(msg0.get("total"))
-            except Exception:
-                pass
-
-            # count: 当前页记录数（通常等于 len(collection)）
-            try:
-                if msg0.get("count") is not None:
-                    meta["count"] = int(msg0.get("count"))
-            except Exception:
-                meta["count"] = len(collection)
-
-            # count_new_papers: 区间内新论文数（按 DOI 去重）
-            try:
-                if msg0.get("count_new_papers") is not None:
-                    meta["count_new_papers"] = int(msg0.get("count_new_papers"))
-            except Exception:
-                pass
-
-            # cursor / interval 原样带回，便于调试
-            if msg0.get("cursor") is not None:
-                meta["cursor"] = msg0.get("cursor")
-            if msg0.get("interval"):
-                meta["interval"] = msg0.get("interval")
-
-        return collection, meta
+                    time.sleep(2 * (attempt + 1))
+        raise BiorxivAPIError(f"BioRxiv details unavailable at offset {cursor}: {last_error}") from last_error
 
     def crawl_date_range(self, date_from: date, date_to: date, batch_delay: Optional[int] = None) -> List[Dict]:
         """按日期范围抓取 BioRxiv 预印本。
@@ -268,12 +228,17 @@ class BiorxivCrawler:
         raw_total_api: Optional[int] = None
         # 以 DOI 为单位去重，用于检测是否在重复翻页
         seen_dois: Set[str] = set()
+        seen_pages = set()
 
-        # BioRxiv API 的 cursor 是“偏移量（offset）”，不是页码；下一页应当加上本页返回条数（通常 100）
+        # BioRxiv API 的 cursor 是“偏移量（offset）”，不是页码；下一页应当加上本页返回条数（按实际返回长度）
         cursor = 0
 
         while True:
             page_items, meta = self._fetch_page(date_from_str, date_to_str, cursor)
+            if raw_total_api is not None and int(meta["total"]) != raw_total_api:
+                raise BiorxivAPIError("Result total changed during pagination; retry the window")
+            if not page_items and raw_total_api is not None and cursor < raw_total_api:
+                raise BiorxivAPIError("Pagination ended before all records were received")
             if not page_items:
                 logger.info(f"BioRxiv L1 offset={cursor} 返回为空，结束分页")
                 break
@@ -292,6 +257,10 @@ class BiorxivCrawler:
                         count_per_page,
                     )
 
+            signature = tuple((item.get("doi"), str(item.get("version")), item.get("date")) for item in page_items)
+            if signature in seen_pages:
+                raise BiorxivAPIError("Repeated page returned for a different cursor")
+            seen_pages.add(signature)
             raw_total_seen += len(page_items)
             kept_this_page = 0
             new_dois_this_page = 0
@@ -326,14 +295,6 @@ class BiorxivCrawler:
             # 如果 API 报告了 total，则抓到最后一页后停止
             if raw_total_api is not None and next_cursor >= raw_total_api:
                 logger.info("BioRxiv L1 已抓取到区间总数 %s（offset=%s），结束分页", raw_total_api, next_cursor)
-                break
-
-            # 兜底：如果本页没有任何新增 DOI，且游标不再推进，则避免死循环
-            if next_cursor == cursor or (new_dois_this_page == 0 and cursor > 0):
-                logger.warning(
-                    "BioRxiv L1 本页无新增 DOI（offset=%s），为避免重复分页提前停止",
-                    cursor,
-                )
                 break
 
             cursor = next_cursor

@@ -5,6 +5,7 @@ Cleanup Tasks - 清理任务
 """
 from celery import shared_task
 
+from core.task_runtime import run_async
 from core.database import get_db_session
 from modules.literature_pool.services.wiw_service import WiWService
 
@@ -31,7 +32,7 @@ def cleanup_expired_mappings_task() -> dict:
                 "deleted_mappings": deleted_count
             }
     
-    return asyncio.run(_run())
+    return run_async(_run())
 
 
 @shared_task(name="literature_pool.cleanup_orphan_wiw")
@@ -56,4 +57,4 @@ def cleanup_orphan_wiw_task() -> dict:
                 "deleted_wiw_results": deleted_count
             }
     
-    return asyncio.run(_run())
+    return run_async(_run())

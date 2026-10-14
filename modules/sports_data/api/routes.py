@@ -18,7 +18,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 
 from core.config import settings
-from modules.literature_pool.api.auth import require_weekly_quota
+from modules.literature_pool.api.auth import require_daily_quota
 
 router = APIRouter(prefix="/sports-data", tags=["sports-data"])
 
@@ -207,7 +207,7 @@ def _infer_scale_kind(source: str, url: str, title: str) -> str:
 async def search_datasets(
     q: str = Query(..., description="English keywords describing the sports dataset you are looking for"),
     limit: int = Query(10, ge=1, le=15, description="Maximum number of results to return (5/10/15 recommended)"),
-    _user=Depends(require_weekly_quota("sports_data_search", 5)),
+    _user=Depends(require_daily_quota("sports_data")),
 ):
     """Search for public sports-related datasets using Tavily.
 
@@ -842,7 +842,7 @@ async def extract_article_metrics(
         "direct",
         description="Extraction mode: 'direct' (default, use PyMuPDF locally and skip MinerU) or 'mineru' (use MinerU)",
     ),
-    _user=Depends(require_weekly_quota("sports_data_article_metrics", 5)),
+    _user=Depends(require_daily_quota("sports_data")),
 ):
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
@@ -917,7 +917,7 @@ async def search_reports(
         le=15,
         description="Maximum number of results to return (5/10/15 recommended)",
     ),
-    _user=Depends(require_weekly_quota("sports_data_search", 5)),
+    _user=Depends(require_daily_quota("sports_data")),
 ):
     """Search for open sports analytics reports and dashboards.
 
@@ -1006,7 +1006,7 @@ async def search_scales(
         le=15,
         description="Maximum number of results to return (5/10/15 recommended)",
     ),
-    _user=Depends(require_weekly_quota("sports_data_search", 5)),
+    _user=Depends(require_daily_quota("sports_data")),
 ):
     """Search for validated scales and questionnaires used in sports contexts.
 
@@ -1095,7 +1095,7 @@ async def search_code(
         le=15,
         description="Maximum number of results to return (5/10/15 recommended)",
     ),
-    _user=Depends(require_weekly_quota("sports_data_search", 5)),
+    _user=Depends(require_daily_quota("sports_data")),
 ):
     """Search for open sports analytics code repositories and models.
 

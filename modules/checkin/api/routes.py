@@ -15,7 +15,7 @@ from modules.checkin.schemas.checkin import (
     SelectCursorResponse,
 )
 from modules.checkin.services.checkin_service import CheckinService, TOTAL_REWARDS
-from modules.literature_pool.api.auth import require_login_user
+from modules.literature_pool.api.auth import get_current_user
 from modules.literature_pool.models.user import User
 
 router = APIRouter(prefix="/checkin", tags=["Daily Checkin"])
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/checkin", tags=["Daily Checkin"])
 @router.get("/status", response_model=CheckinStatusResponse)
 async def get_checkin_status(
     month: str | None = Query(default=None, description="YYYY-MM"),
-    user: User = Depends(require_login_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = CheckinService(db)
@@ -41,7 +41,7 @@ async def get_checkin_status(
 
 @router.post("/claim", response_model=CheckinClaimResponse)
 async def claim_today(
-    user: User = Depends(require_login_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = CheckinService(db)
@@ -59,7 +59,7 @@ async def claim_today(
 @router.post("/select-cursor", response_model=SelectCursorResponse)
 async def select_cursor(
     payload: SelectCursorRequest,
-    user: User = Depends(require_login_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = CheckinService(db)

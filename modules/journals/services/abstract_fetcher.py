@@ -19,6 +19,7 @@ import httpx
 
 from core.external.pubmed import get_pubmed_client
 from modules.journals.services.openalex_client import OpenAlexClient
+from core.external.base import UpstreamRateLimited
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +168,8 @@ class AbstractFetcher:
                 tokens = [token for _, token in positions]
                 abstract = " ".join(tokens)
                 return abstract.strip() if abstract.strip() else None
+            except UpstreamRateLimited:
+                return None
             except Exception as exc:
                 logger.warning(
                     "OpenAlex 摘要生成失败（第%s次，DOI=%s）: %s",

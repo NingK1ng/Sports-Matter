@@ -291,6 +291,9 @@ class CommunityDetector:
         try:
             # 转换为NetworkX社区格式
             community_list = [set(nodes) for nodes in communities.values()]
+            # 展示层会过滤单节点社区，但模块度要求分区覆盖整个图。
+            covered = set().union(*community_list)
+            community_list.extend({node} for node in graph if node not in covered)
             modularity_score = community.modularity(graph, community_list, weight='weight')
             return round(modularity_score, 3)
         except Exception as e:

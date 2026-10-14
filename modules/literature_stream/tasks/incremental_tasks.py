@@ -12,6 +12,7 @@ from typing import List, Set, Dict, Any
 from celery import shared_task
 from sqlalchemy import select
 
+from core.task_runtime import run_async
 from core.database import get_db_session, init_database
 from core.cache import init_cache
 from core.external.pubmed import get_pubmed_client, map_pub_types_to_lit_types
@@ -193,7 +194,7 @@ def incremental_edat_72h() -> Dict[str, Any]:
     edat_start = start_utc.strftime('%Y/%m/%d %H:%M:%S')
     edat_end = end_utc.strftime('%Y/%m/%d %H:%M:%S')
     date_filter = f'("{edat_start}"[EDAT] : "{edat_end}"[EDAT])'
-    return asyncio.run(_run_by_category(date_filter, mode='incremental_edat_72h'))
+    return run_async(_run_by_category(date_filter, mode='incremental_edat_72h'))
 
 
 @shared_task(name="literature_stream.rollup_edat_7d")
@@ -203,7 +204,7 @@ def rollup_edat_7d() -> Dict[str, Any]:
     edat_start = start_utc.strftime('%Y/%m/%d %H:%M:%S')
     edat_end = end_utc.strftime('%Y/%m/%d %H:%M:%S')
     date_filter = f'("{edat_start}"[EDAT] : "{edat_end}"[EDAT])'
-    return asyncio.run(_run_by_category(date_filter, mode='rollup_edat_7d'))
+    return run_async(_run_by_category(date_filter, mode='rollup_edat_7d'))
 
 
 @shared_task(name="literature_stream.backfill_pdat_7d")
@@ -213,6 +214,6 @@ def backfill_pdat_7d() -> Dict[str, Any]:
     pdat_start = start_utc.strftime('%Y/%m/%d')
     pdat_end = end_utc.strftime('%Y/%m/%d')
     date_filter = f'("{pdat_start}"[dp] : "{pdat_end}"[dp])'
-    return asyncio.run(_run_by_category(date_filter, mode='backfill_pdat_7d'))
+    return run_async(_run_by_category(date_filter, mode='backfill_pdat_7d'))
 
 

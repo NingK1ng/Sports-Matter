@@ -10,10 +10,14 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import logging
-from sqlalchemy import or_
+from sqlalchemy import or_, case
 
+from core.task_runtime import run_async
 from core.config import settings
-from core.cache import init_cache
+from core.external.base import UpstreamRateLimited
+from core.cache import init_cache, cache_get, cache_set
+from core.task_lock import task_lock
+import time
 from core.celery_app import celery_app
 from modules.journals.models.journal import JournalMetadata, JournalArticle, CrawlTaskLog
 from modules.journals.services.crawler import JournalCrawler
@@ -42,7 +46,7 @@ def crawl_all_journals() -> Dict[str, Any]:
     UTC+8每日凌晨4点执行（Celery Beat配置）
     """
     logger.info("开始每日增量爬取...")
-    return asyncio.run(_async_crawl_all())
+    return run_async(_async_crawl_all())
 
 
 async def _async_crawl_all() -> Dict[str, Any]:
@@ -69,6 +73,7 @@ async def _async_crawl_all() -> Dict[str, Any]:
                         args=[journal.issn_l],
                         countdown=countdown,
                         queue='journals_tracking',
+                        expires=21600,
                     )
                     dispatched += 1
                     logger.info(
@@ -92,7 +97,7 @@ def rollup_7days() -> Dict[str, Any]:
     每周执行一次，确保没有遗漏
     """
     logger.info("开始7天回补爬取...")
-    return asyncio.run(_async_rollup_7days())
+    return run_async(_async_rollup_7days())
 
 
 async def _async_rollup_7days() -> Dict[str, Any]:
@@ -158,7 +163,7 @@ def backfill_last_30d() -> Dict[str, Any]:
     - 每个期刊使用 from_date=今天-30天（pub-date），避免“近期入库但发表很久以前”的感知偏差
     """
     logger.info("开始30天回补爬取（派发子任务）...")
-    return asyncio.run(_async_dispatch_backfill_last_days(30))
+    return run_async(_async_dispatch_backfill_last_days(30))
 
 
 async def _async_dispatch_backfill_last_days(days: int) -> Dict[str, Any]:
@@ -189,6 +194,7 @@ async def _async_dispatch_backfill_last_days(days: int) -> Dict[str, Any]:
                         },
                         countdown=countdown,
                         queue='journals_tracking',
+                        expires=21600,
                     )
                     dispatched += 1
                     logger.info(
@@ -207,16 +213,19 @@ async def _async_dispatch_backfill_last_days(days: int) -> Dict[str, Any]:
 
 
 @shared_task(name="journals_tracking.update_citation_counts")
-def update_citation_counts() -> Dict[str, Any]:
+def update_citation_counts(limit: int | None = None) -> Dict[str, Any]:
     """
     更新被引数和标签
-    UTC+8每日凌晨5点执行（Celery Beat配置）
+    UTC+8 05:00起每两小时执行有界批次（Celery Beat配置）
     """
     logger.info("开始更新被引数...")
-    return asyncio.run(_async_update_citations())
+    with task_lock("citation_update", ttl=660) as acquired:
+        if not acquired:
+            return {"status": "already_running"}
+        return run_async(_async_update_citations(limit))
 
 
-async def _async_update_citations() -> Dict[str, Any]:
+async def _async_update_citations(limit: int | None = None) -> Dict[str, Any]:
     """异步执行被引更新"""
     engine, SessionLocal = _build_session_factory()
     try:
@@ -236,10 +245,12 @@ async def _async_update_citations() -> Dict[str, Any]:
             await session.commit()
             try:
                 # 仅处理需要刷新被引的子集，避免超时
-                # 默认：last_citation_update_at 为空或超过7天，最大处理5000篇
+                # last_citation_update_at 为空或超过7天；每批默认500篇，游标避免失败记录饿死后续文献
                 import os
                 staleness_days = int(os.getenv("CITATION_STALENESS_DAYS", "7"))
-                max_rows = int(os.getenv("CITATION_MAX_ROWS", "5000"))
+                max_rows = max(1, min(1000, int(limit if limit is not None else os.getenv("CITATION_MAX_ROWS", "500"))))
+                last_id = int(await cache_get("sm:citations:last-id") or 0)
+                started = time.monotonic()
                 cutoff = datetime.now(timezone.utc) - timedelta(days=staleness_days)
 
                 result = await session.execute(
@@ -251,8 +262,7 @@ async def _async_update_citations() -> Dict[str, Any]:
                         )
                     )
                     .order_by(
-                        JournalArticle.last_citation_update_at.is_(None).desc(),
-                        JournalArticle.last_citation_update_at.asc(),
+                        case((JournalArticle.id > last_id, 0), else_=1),
                         JournalArticle.id.asc(),
                     )
                     .limit(max_rows)
@@ -278,6 +288,8 @@ async def _async_update_citations() -> Dict[str, Any]:
 
                 client = OpenAlexClient()
                 calculator = LabelCalculator()
+                last_processed_id = last_id
+                budget_reached = False
 
                 # 分批处理，避免长事务
                 for i in range(0, len(articles), batch_size):
@@ -285,6 +297,9 @@ async def _async_update_citations() -> Dict[str, Any]:
                     logger.info(f"处理批次: offset={i}, count={len(chunk)}")
 
                     for article in chunk:
+                        if time.monotonic() - started > 420:
+                            budget_reached = True
+                            break
                         try:
                             work = await client.get_work_by_doi(article.doi)
 
@@ -303,31 +318,36 @@ async def _async_update_citations() -> Dict[str, Any]:
                                 article.labels = labels
                                 total_updated += 1
                             else:
-                                labels = calculator.calculate_time_labels(
-                                    article.published_at_precise
-                                )
-                                article.labels = labels
-                                article.last_citation_update_at = datetime.now(timezone.utc)
+                                # A missing upstream result is not a successful refresh.
                                 total_failed += 1
+                        except UpstreamRateLimited as exc:
+                            await client.close()
+                            task_log.status = "failed"
+                            task_log.error_message = str(exc)
+                            task_log.total_fetched = total_updated + total_failed
+                            task_log.updated_count = total_updated
+                            task_log.finished_at = datetime.now(timezone.utc)
+                            await session.commit()
+                            await cache_set("sm:citations:last-id", last_processed_id, ttl=30*86400)
+                            return {"status": "deferred", "retry_after": exc.retry_after,
+                                    "total_updated": total_updated, "total_failed": total_failed}
                         except Exception as e:
                             logger.error(f"更新失败: {article.doi}, {e}")
-                            try:
-                                article.labels = calculator.calculate_time_labels(
-                                    article.published_at_precise
-                                )
-                            except Exception:
-                                pass
                             total_failed += 1
 
+                        last_processed_id = article.id
                         await asyncio.sleep(0.125)  # 限流
 
                     await session.commit()
+                    await cache_set("sm:citations:last-id", last_processed_id, ttl=30*86400)
                     logger.info(f"✅ 批次完成: 更新{total_updated}篇, 失败{total_failed}篇")
+                    if budget_reached:
+                        break
 
                 await client.close()
 
                 task_log.status = "success"
-                task_log.total_fetched = len(articles)
+                task_log.total_fetched = total_updated + total_failed
                 task_log.updated_count = total_updated
                 task_log.finished_at = datetime.now(timezone.utc)
                 await session.commit()
@@ -338,13 +358,19 @@ async def _async_update_citations() -> Dict[str, Any]:
                     "total_failed": total_failed,
                     "staleness_days": staleness_days,
                     "max_rows": max_rows,
+                    "budget_reached": budget_reached,
+                    "last_processed_id": last_processed_id,
                 }
             except Exception as exc:
-                task_log.status = "failed"
-                task_log.error_message = str(exc)
-                task_log.finished_at = datetime.now(timezone.utc)
+                log_id = task_log.id
+                await session.rollback()
+                await session.execute(update(CrawlTaskLog).where(CrawlTaskLog.id == log_id).values(
+                    status="failed", error_message=str(exc), finished_at=datetime.now(timezone.utc)))
                 await session.commit()
                 raise
+            finally:
+                if "client" in locals():
+                    await client.close()
     finally:
         await engine.dispose()
 
@@ -356,7 +382,7 @@ def refresh_time_labels() -> Dict[str, Any]:
     设计目的：保证 new/recent 每日准确（避免被 CITATION_STALENESS_DAYS=7 拖延）。
     """
     logger.info("开始刷新时效性标签...")
-    return asyncio.run(_async_refresh_time_labels())
+    return run_async(_async_refresh_time_labels())
 
 
 async def _async_refresh_time_labels() -> Dict[str, Any]:
@@ -409,7 +435,8 @@ async def _async_refresh_time_labels() -> Dict[str, Any]:
         await engine.dispose()
 
 
-@shared_task(name="journals_tracking.crawl_single_journal")
+@shared_task(name="journals_tracking.crawl_single_journal", autoretry_for=(Exception,),
+             retry_backoff=120, retry_backoff_max=1800, retry_kwargs={"max_retries": 3})
 def crawl_single_journal(
     issn_l: str,
     cold_start: bool = False,
@@ -435,7 +462,7 @@ def crawl_single_journal(
     logger.info(
         f"爬取期刊: {issn_l}, cold_start={cold_start}, window_days={window_days}"
     )
-    return asyncio.run(
+    return run_async(
         _async_crawl_single(
             issn_l=issn_l,
             cold_start=cold_start,
@@ -502,12 +529,8 @@ async def _async_crawl_single(
                     "stats": stats,
                 }
             
-            except Exception as e:
+            except Exception:
                 await crawler.close()
-                return {
-                    "status": "failed",
-                    "issn_l": issn_l,
-                    "error": str(e),
-                }
+                raise
     finally:
         await engine.dispose()

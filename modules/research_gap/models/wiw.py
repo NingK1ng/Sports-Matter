@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 
 from models.base import Base
+from core.external.deepseek import DEEPSEEK_FLASH_MODEL
 
 
 class WiWResult(Base):
@@ -28,7 +29,7 @@ class WiWResult(Base):
     top_k = Column(Integer, nullable=False, default=10, comment="召回文献数量（5/10/15）")
     strategy_version = Column(String(10), nullable=False, default="v1", comment="召回策略版本")
     template_version = Column(String(10), nullable=False, default="v1", comment="Prompt模板版本")
-    model_version = Column(String(50), nullable=False, default="deepseek-v4-flash", comment="LLM模型版本")
+    model_version = Column(String(50), nullable=False, default=DEEPSEEK_FLASH_MODEL, comment="LLM模型版本")
     language = Column(String(5), nullable=False, default="zh", comment="生成语言（zh/en）")
     
     # WiW卡片内容（JSONB格式）

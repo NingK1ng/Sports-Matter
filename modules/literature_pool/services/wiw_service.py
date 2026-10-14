@@ -13,6 +13,10 @@ from modules.literature_pool.models.subscription import PoolSubscription
 from modules.literature_pool.models.wiw_card import PoolWiWCard
 from modules.research_gap.models.wiw import WiWResult
 from modules.research_gap.services.wiw_generator import WiWGenerator
+from core.external.deepseek import DEEPSEEK_FLASH_MODEL
+
+
+from modules.literature_pool.services.daily_quota_service import DailyQuotaService, DailyQuotaExceeded
 
 
 class WiWService:
@@ -52,7 +56,7 @@ class WiWService:
                 WiWResult.input_fingerprint == fingerprint,
                 WiWResult.created_at >= thirty_days_ago
             )
-        ).order_by(WiWResult.created_at.desc())
+        ).order_by(WiWResult.created_at.desc()).limit(1)
         
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -84,6 +88,12 @@ class WiWService:
             print(f"✅ 复用已有WiW结果: wiw_result_id={existing_wiw.id}, pmid={pmid}")
             wiw_result_id = existing_wiw.id
         else:
+            subscription = await self.session.get(PoolSubscription, subscription_id)
+            if not subscription:
+                raise ValueError("Subscription not found")
+            quota = await DailyQuotaService(self.session).consume(subscription.user_id, "pigeon_generate")
+            if not quota.allowed:
+                raise DailyQuotaExceeded(quota)
             # 2. 生成新的WiW
             print(f"🆕 生成新WiW: pmid={pmid}")
             wiw_data = await self.wiw_generator.generate_wiw(
@@ -102,7 +112,7 @@ class WiWService:
                 top_k=10,
                 strategy_version="v1",
                 template_version="v1",
-                model_version=wiw_data["meta"].get("model_version", "deepseek-v4-flash"),
+                model_version=wiw_data["meta"].get("model_version", DEEPSEEK_FLASH_MODEL),
                 language="zh",
                 card_content=wiw_data["card"],
                 references=wiw_data["references"],

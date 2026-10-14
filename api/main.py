@@ -126,7 +126,10 @@ async def log_requests(request: Request, call_next):
     # 将request_id注入到state
     request.state.request_id = request_id
 
+    from core.visitor_session import prepare_visitor, set_visitor_cookie
+    prepare_visitor(request)
     response = await call_next(request)
+    set_visitor_cookie(request, response)
 
     # 计算耗时
     cost_ms = int((time.time() - start_time) * 1000)

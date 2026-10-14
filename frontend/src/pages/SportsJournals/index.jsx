@@ -123,11 +123,7 @@ function SportsJournals() {
   const navigate = useNavigate()
   const outlet = useOutletContext()
   const authSession = outlet?.authSession
-  const openLogin = outlet?.openLogin
-  const openMembership = outlet?.openMembership
 
-  const isGuest = Boolean(authSession?.user?.is_guest || authSession?.user?.nickname === '访客' || authSession?.user?.nickname === '游客')
-  const isMember = Boolean(authSession?.user?.is_member)
 
   const [q, setQ] = useState('')
   const [casPartition, setCasPartition] = useState('all')
@@ -151,12 +147,6 @@ function SportsJournals() {
   // 根据筛选和页码加载列表（模仿文献上新逻辑）
   useEffect(() => {
     if (!authSession) return
-    if (isGuest) return
-    if (!isMember && category === 'high_volume') {
-      setCategory('sports_science')
-      setPage(1)
-      return
-    }
     const run = async () => {
       setLoading(true)
       setError(null)
@@ -184,7 +174,7 @@ function SportsJournals() {
 
     run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authSession, isGuest, page, casPartition, oaType, category])
+  }, [authSession, page, casPartition, oaType, category])
 
   const handleSearch = async () => {
     setPage(1)
@@ -250,36 +240,6 @@ function SportsJournals() {
     )
   }
 
-  if (isGuest) {
-    return (
-      <div className={styles.literatureStream}>
-        <header className={styles.pageHeader}>
-          <h1 className={`${styles.pageTitle} ${titleVisible ? styles.fadeIn : ''}`}>
-            运动科学期刊
-          </h1>
-          <TypewriterSubtitle
-            text={['该模块需要登录后访问']}
-            active={titleVisible}
-          />
-        </header>
-        <div style={{ padding: '16px' }}>
-          <button
-            type="button"
-            className="qq-login-entry"
-            onClick={() => openLogin && openLogin()}
-            aria-label="QQ登录"
-          >
-            <img
-              src="/qq-login.png"
-              alt="QQ登录"
-              className="qq-login-img"
-              draggable="false"
-            />
-          </button>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className={styles.literatureStream}>
@@ -370,17 +330,13 @@ function SportsJournals() {
             value={category}
             onChange={(e) => {
               const next = e.target.value
-              if (next === 'high_volume' && !isMember) {
-                openMembership && openMembership()
-                return
-              }
               setPage(1)
               setCategory(next)
             }}
           >
             <option value="sports_science">运动科学专刊</option>
             <option value="high_volume">
-              文献上新高频期刊{!isMember ? '（会员）' : ''}
+              文献上新高频期刊
             </option>
           </select>
         </div>

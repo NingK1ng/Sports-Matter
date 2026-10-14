@@ -98,13 +98,6 @@ const ResearchGap = () => {
   };
 
   const hasSearched = loading || !!result || !!error;
-  const isMember = Boolean(authSession?.user?.is_member)
-  const wiwQuota = authSession?.quota?.features?.wiw_generate
-  const quotaHint = isMember
-    ? '会员不限次数'
-    : wiwQuota
-        ? `本周剩余：${wiwQuota.remaining}/${wiwQuota.limit}`
-        : '未登录/非会员每周免费 3 次'
 
   return (
     <div className={`${styles.container} ${!hasSearched ? styles.initial : ''}`}>
@@ -321,9 +314,6 @@ const ResearchGap = () => {
         </div>
       )}
 
-      <footer className={styles.quotaFooter}>
-        {quotaHint}
-      </footer>
     </div>
   );
 };

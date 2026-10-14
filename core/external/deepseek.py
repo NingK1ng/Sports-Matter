@@ -15,14 +15,16 @@ from core.external.base import BaseAPIClient
 
 logger = logging.getLogger(__name__)
 
-DEEPSEEK_V4_FLASH_MODEL = "deepseek-v4-flash"
-LEGACY_DEEPSEEK_MODELS = {"deepseek-chat", "deepseek-reasoner"}
+DEEPSEEK_FLASH_MODEL = "deepseek-flash"
+# Keep the existing import name compatible across workers and maintenance scripts.
+DEEPSEEK_V4_FLASH_MODEL = DEEPSEEK_FLASH_MODEL
+LEGACY_DEEPSEEK_MODELS = {"deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash"}
 THINKING_DISABLED = {"type": "disabled"}
 
 
 def normalize_deepseek_model(model: Optional[str]) -> str:
-    """Route legacy DeepSeek v3 aliases to the current v4-flash model."""
-    model_name = (model or DEEPSEEK_V4_FLASH_MODEL).strip()
+    """Route retired DeepSeek aliases to the current Flash model."""
+    model_name = (model or DEEPSEEK_FLASH_MODEL).strip() or DEEPSEEK_FLASH_MODEL
     if model_name in LEGACY_DEEPSEEK_MODELS:
         return DEEPSEEK_V4_FLASH_MODEL
     return model_name

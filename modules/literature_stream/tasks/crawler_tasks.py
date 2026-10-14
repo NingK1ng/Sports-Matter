@@ -11,7 +11,12 @@ from dateutil import parser as date_parser
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from core.task_runtime import run_async
 from core.config import settings
+from core.cache import init_cache
+from core.task_lock import task_lock
+from sqlalchemy import select
+from modules.literature_stream.models.literature import CrawlTaskLog
 from modules.literature_stream.services.llm_crawler import LLMPubMedCrawler
 
 
@@ -29,22 +34,55 @@ def _build_session_factory():
     return async_engine, session_factory
 
 
-@shared_task(name="literature_stream.daily_incremental_crawl")
-def daily_incremental_crawl() -> Dict[str, Any]:
+@shared_task(name="literature_stream.daily_incremental_crawl", bind=True, max_retries=3,
+             soft_time_limit=1740, time_limit=1800)
+def daily_incremental_crawl(self) -> Dict[str, Any]:
     """每日增量爬取任务（UTC+8每日凌晨2点触发）"""
-    return asyncio.run(_async_daily_crawl())
+    try:
+        with task_lock("literature_daily") as acquired:
+            if not acquired:
+                return {"status": "already_running"}
+            return run_async(_async_daily_crawl())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=min(1800, 120 * 2 ** self.request.retries))
+
+
+def daily_window(now: datetime, last_end: datetime | None):
+    """Resume from the last successful EDAT boundary, with overlap and bounded batches."""
+    start = now - timedelta(days=3)
+    if last_end:
+        if last_end.tzinfo is None:
+            last_end = last_end.replace(tzinfo=timezone.utc)
+        start = min(start, last_end - timedelta(hours=6))
+    return start, min(now, start + timedelta(days=7))
 
 
 async def _async_daily_crawl() -> Dict[str, Any]:
     """异步执行每日增量爬取"""
+    await init_cache()
     engine, SessionLocal = _build_session_factory()
     try:
         async with SessionLocal() as session:
+            result = await session.execute(
+                select(CrawlTaskLog.query_params)
+                .where(CrawlTaskLog.status == "success",
+                       CrawlTaskLog.task_type == "incremental_daily")
+                .order_by(CrawlTaskLog.started_at.desc()).limit(50)
+            )
+            ends = []
+            for params in result.scalars():
+                if params.get("date_field") == "EDAT" and params.get("end_utc"):
+                    ends.append(date_parser.parse(params["end_utc"]))
+            now = datetime.now(timezone.utc)
+            start, end = daily_window(now, max(ends) if ends else None)
             crawler = LLMPubMedCrawler(session)
-            result = await crawler.incremental_crawl(date_field="EDAT")
+            result = await crawler.incremental_crawl(start_utc=start, end_utc=end, date_field="EDAT")
+            if end < now - timedelta(minutes=1):
+                daily_incremental_crawl.apply_async(countdown=60, expires=21600)
 
             return {
                 "timestamp": datetime.utcnow().isoformat() + "Z",
+                "window_start": start.isoformat(), "window_end": end.isoformat(),
                 **result,
             }
     finally:
@@ -54,7 +92,7 @@ async def _async_daily_crawl() -> Dict[str, Any]:
 @shared_task(name="literature_stream.backfill_last_30d")
 def backfill_last_30d() -> Dict[str, Any]:
     """回填最近30天文献（仅写入缺失PMID，已存在会跳过）。"""
-    return asyncio.run(_async_backfill_last_days(30))
+    return run_async(_async_backfill_last_days(30))
 
 
 async def _async_backfill_last_days(days: int) -> Dict[str, Any]:
@@ -82,7 +120,7 @@ async def _async_backfill_last_days(days: int) -> Dict[str, Any]:
 @shared_task(name="literature_stream.warm_start_all_categories")
 def warm_start_all_categories(start_date: str = "2024-01-01") -> Dict[str, Any]:
     """全量回填任务（手动触发或首次部署时执行）"""
-    return asyncio.run(_async_warm_start(start_date))
+    return run_async(_async_warm_start(start_date))
 
 
 async def _async_warm_start(start_date: str) -> Dict[str, Any]:
@@ -110,7 +148,7 @@ def crawl_single_category(
     end_date: Optional[str] = None,
 ) -> Dict[str, Any]:
     """兼容旧签名的手动触发任务（category_key 参数仅为兼容保留）"""
-    return asyncio.run(_async_crawl_single(start_date, end_date, incremental))
+    return run_async(_async_crawl_single(start_date, end_date, incremental))
 
 
 async def _async_crawl_single(

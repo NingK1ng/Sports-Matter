@@ -38,9 +38,9 @@ from modules.assistant.models.query_log import AssistantQueryLog
 from modules.assistant.tools.pubmed_toolkit import PubMedToolkit
 from core.external.pubmed import PubMedClient
 from modules.assistant.api.routes_streaming import generate_streaming_response
-from modules.literature_pool.api.auth import get_current_user, is_member_user, require_weekly_quota
+from modules.literature_pool.api.auth import get_current_user, require_daily_quota
 from modules.literature_pool.models.user import User as PoolUser
-from modules.literature_pool.services.usage_limit_service import UsageLimitService
+from modules.literature_pool.services.daily_quota_service import DailyQuotaService
 
 logger = logging.getLogger(__name__)
 
@@ -968,11 +968,13 @@ async def chat(
     request: AssistantChatRequest,
     db: AsyncSession = Depends(get_db),
     deepseek: DeepSeekClient = Depends(get_deepseek_client),
-    _user=Depends(require_weekly_quota("assistant_chat", 3)),
+    _user=Depends(require_daily_quota("assistant_chat")),
 ):
     """
     AI助手聊天（非流式）
     """
+    if request.session_id:
+        request = request.model_copy(update={"session_id": f"u{_user.id}:{request.session_id}"})
     return await _chat_logic(request, db, deepseek)
 
 
@@ -981,7 +983,7 @@ async def chat_stream(
     request: AssistantChatRequest,
     db: AsyncSession = Depends(get_db),
     deepseek: DeepSeekClient = Depends(get_deepseek_client),
-    _user=Depends(require_weekly_quota("assistant_chat", 3)),
+    _user=Depends(require_daily_quota("assistant_chat")),
 ):
     """
     AI助手聊天（SSE真流式）- 方案A优化
@@ -991,6 +993,9 @@ async def chat_stream(
     2. 立即开始流式生成（实时推送token）
     3. 生成完成后校验引用并发送citations
     """
+
+    if request.session_id:
+        request = request.model_copy(update={"session_id": f"u{_user.id}:{request.session_id}"})
 
     async def generate():
         search_start = time.time()
@@ -1140,41 +1145,13 @@ async def chat_stream_get(
     """
     AI助手聊天（SSE流式，GET 兼容 EventSource）
     """
-    if not is_member_user(current_user):
-        limiter = UsageLimitService(db)
-        result = await limiter.consume_weekly_quota(
-            user_id=current_user.id,
-            feature_key="assistant_chat",
-            limit=3,
-        )
-        if not result.allowed:
-            async def _deny():
-                yield _sse_payload(
-                    {
-                        "type": "error",
-                        "code": "WEEKLY_LIMIT_EXCEEDED",
-                        "message": f"本功能每周最多 {result.limit} 次（本周已用 {result.used} 次）",
-                        "detail": {
-                            "feature": result.feature_key,
-                            "week_start": result.week_start.isoformat(),
-                            "week_end": result.week_end.isoformat(),
-                            "limit": result.limit,
-                            "used": result.used,
-                            "remaining": result.remaining,
-                        },
-                    },
-                    event="error",
-                )
-                yield _sse_payload({"type": "done"}, event="done")
-
-            return StreamingResponse(
-                _deny(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "X-Accel-Buffering": "no",
-                },
-            )
+    result = await DailyQuotaService(db).consume(current_user.id, "assistant_chat")
+    if not result.allowed:
+        async def _deny():
+            yield _sse_payload({"type": "error", **result.detail(), "detail": result.detail()}, event="error")
+            yield _sse_payload({"type": "done"}, event="done")
+        return StreamingResponse(_deny(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     # 仅在本地模式下使用本地数据源选项；为空时回退为 both
     effective_local_source = local_source or "both"
@@ -1188,7 +1165,7 @@ async def chat_stream_get(
         session_id=session_id,
         local_source=effective_local_source,
     )
-    return await chat_stream(req, db, deepseek)
+    return await chat_stream(req, db, deepseek, current_user)
 
 
 @router.get("/test-sse")

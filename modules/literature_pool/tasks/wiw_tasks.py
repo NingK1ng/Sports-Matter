@@ -8,11 +8,13 @@ from celery import shared_task
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
 
+from core.task_runtime import run_async
 from core.database import get_db_session
 from modules.literature_pool.models.subscription import PoolSubscription
 from modules.literature_pool.models.user import User
 from modules.literature_pool.services.pool_service import PoolService
 from modules.literature_pool.services.wiw_service import WiWService
+from modules.literature_pool.services.daily_quota_service import DailyQuotaExceeded
 
 
 @shared_task(name="literature_pool.generate_stream_wiw", bind=True, max_retries=3)
@@ -91,6 +93,8 @@ def generate_stream_wiw_task(self, subscription_id: int) -> dict:
                     "pmid": article.pmid
                 }
             
+            except DailyQuotaExceeded:
+                return {"status": "skipped", "reason": "daily_limit_exceeded"}
             except ValueError as e:
                 error_msg = str(e)
                 
@@ -100,7 +104,7 @@ def generate_stream_wiw_task(self, subscription_id: int) -> dict:
                 
                 return {"status": "failed", "error": error_msg}
     
-    return asyncio.run(_run())
+    return run_async(_run())
 
 
 @shared_task(name="literature_pool.generate_journals_wiw", bind=True, max_retries=3)
@@ -182,6 +186,8 @@ def generate_journals_wiw_task(self, subscription_id: int) -> dict:
                         "pmid": article.pmid
                     })
                 
+                except DailyQuotaExceeded:
+                    break
                 except ValueError as e:
                     error_msg = str(e)
                     failed_cards.append({
@@ -198,7 +204,7 @@ def generate_journals_wiw_task(self, subscription_id: int) -> dict:
                 "failed_cards": failed_cards
             }
     
-    return asyncio.run(_run())
+    return run_async(_run())
 
 
 @shared_task(name="literature_pool.generate_all_subscriptions_wiw")
@@ -271,4 +277,4 @@ def generate_all_subscriptions_wiw_task() -> dict:
                 "journals_tasks_scheduled": journals_tasks_scheduled
             }
     
-    return asyncio.run(_run())
+    return run_async(_run())

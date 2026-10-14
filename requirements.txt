@@ -33,6 +33,7 @@ zstandard==0.23.0  # zstd压缩
 # 任务队列
 # ==========================================
 celery==5.4.0
+flower==2.2.0  # optional task monitor
 kombu==5.4.2  # Celery消息传输
 redis==5.2.1  # Celery结果后端（可选）
 

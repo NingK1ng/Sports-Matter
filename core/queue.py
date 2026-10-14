@@ -11,6 +11,7 @@ from celery import Celery
 from celery.schedules import crontab
 from sqlalchemy import text
 
+from core.task_runtime import run_async
 from core.config import settings
 from core.cache import init_cache, get_redis
 from core.database import get_session_factory, init_database
@@ -97,10 +98,10 @@ celery_app.conf.beat_schedule = {
         'schedule': crontab(hour=4, minute=30),  # UTC+8 04:30
         'options': {'queue': 'journals_tracking'},
     },
-    # 顶刊追踪 - 更新被引数（每日凌晨5点）
+    # 顶刊追踪 - 分10批更新被引数，保持约每日5000篇上限
     'journals-update-citations': {
         'task': 'journals_tracking.update_citation_counts',
-        'schedule': crontab(hour=5, minute=0),  # UTC+8 05:00
+        'schedule': crontab(hour='5-23/2', minute=0),  # 500篇/批，保存游标续跑
         'options': {'queue': 'journals_tracking'},
     },
     # 顶刊追踪 - 刷新时效性标签（每日凌晨5:10）
@@ -222,6 +223,36 @@ celery_app.conf.task_routes = {
 }
 
 
+# Bound scheduled work and discard obsolete periodic messages before execution.
+for _name, _entry in celery_app.conf.beat_schedule.items():
+    _options = _entry.setdefault("options", {})
+    _options["expires"] = 3000 if _name.startswith("maintenance-") else 21600
+    if _entry["task"] == "literature_stream.daily_incremental_crawl":
+        _options["queue"] = "literature_daily"
+celery_app.conf.task_routes = {
+    "literature_stream.daily_incremental_crawl": {"queue": "literature_daily"},
+    **celery_app.conf.task_routes,
+}
+celery_app.conf.task_annotations = {
+    name: {"soft_time_limit": soft, "time_limit": hard}
+    for name, soft, hard in [
+        ("journals_tracking.crawl_single_journal", 1740, 1800),
+        ("biorxiv.incremental_crawl", 1740, 1800),
+        ("journals_tracking.rollup_7days", 3540, 3600),
+        ("literature_stream.import_if_from_excel", 840, 900),
+        ("literature_stream.enrich_if_recent", 840, 900),
+        ("journals_tracking.update_citation_counts", 540, 600),
+        ("journals_tracking.enrich_missing_abstracts", 1140, 1200),
+        ("journals_tracking.classify_cns_sports_related", 1740, 1800),
+        ("maintenance.ensure_daily_jobs", 90, 120),
+        ("maintenance.cleanup_stale_crawl_log", 90, 120),
+        ("maintenance.cleanup_stale_crawl_log_journals", 90, 120),
+    ]
+}
+celery_app.conf.beat_schedule["journals-enrich-abstracts"]["kwargs"] = {"limit": 200}
+celery_app.conf.beat_schedule["journals-cns-sports-classify"]["kwargs"] = {"limit": 500}
+
+
 # 任务装饰器示例
 @celery_app.task(
     bind=True,
@@ -263,7 +294,7 @@ def cleanup_stale_crawl_log() -> int:
         session_factory = get_session_factory()
     except Exception:
         try:
-            asyncio.run(init_database())
+            run_async(init_database())
             session_factory = get_session_factory()
         except Exception as e:
             print(f"⚠️ 无法获取数据库会话: {e}")
@@ -279,7 +310,7 @@ def cleanup_stale_crawl_log() -> int:
                         error_message = 'auto-reset stale running',
                         finished_at = NOW()
                     WHERE status = 'running'
-                      AND started_at < NOW() - INTERVAL '7 days'
+                      AND started_at < NOW() - INTERVAL '45 minutes'
                     """
                 )
             )
@@ -287,7 +318,7 @@ def cleanup_stale_crawl_log() -> int:
             return result.rowcount or 0
 
     try:
-        updated = asyncio.run(_run())
+        updated = run_async(_run())
         if updated:
             print(f"🧹 清理卡住的任务 {updated} 条")
         return updated
@@ -305,7 +336,7 @@ def cleanup_stale_crawl_log_journals() -> int:
         session_factory = get_session_factory()
     except Exception:
         try:
-            asyncio.run(init_database())
+            run_async(init_database())
             session_factory = get_session_factory()
         except Exception as e:
             print(f"⚠️ 无法获取数据库会话: {e}")
@@ -321,7 +352,7 @@ def cleanup_stale_crawl_log_journals() -> int:
                         error_message = 'auto-reset stale running',
                         finished_at = NOW()
                     WHERE status = 'running'
-                      AND started_at < NOW() - INTERVAL '7 days'
+                      AND started_at < NOW() - INTERVAL '45 minutes'
                     """
                 )
             )
@@ -329,7 +360,7 @@ def cleanup_stale_crawl_log_journals() -> int:
             return result.rowcount or 0
 
     try:
-        updated = asyncio.run(_run())
+        updated = run_async(_run())
         if updated:
             print(f"🧹 清理顶刊卡住的任务 {updated} 条")
         return updated
@@ -354,7 +385,7 @@ def ensure_daily_jobs() -> dict:
         session_factory = get_session_factory()
     except Exception:
         try:
-            asyncio.run(init_database())
+            run_async(init_database())
             session_factory = get_session_factory()
         except Exception as e:
             return {"status": "failed", "error": f"cannot_init_db: {e}"}
@@ -379,7 +410,7 @@ def ensure_daily_jobs() -> dict:
             # Redis 仅用于兜底去重；不可用时不阻塞补跑
             redis = None
 
-        async def _claim_once(key: str, ttl_seconds: int = 36 * 3600) -> bool:
+        async def _claim_once(key: str, ttl_seconds: int = 2 * 3600) -> bool:
             if redis is None:
                 return True
             try:
@@ -436,11 +467,34 @@ def ensure_daily_jobs() -> dict:
                 if await _claim_once(_marker_key("literature_stream_daily", lit_start_local)):
                     celery_app.send_task(
                         "literature_stream.daily_incremental_crawl",
-                        queue="literature_stream",
+                        queue="literature_daily",
+                        expires=21600,
                     )
                     actions["literature_stream_daily"] = "dispatched"
                 else:
                     actions["literature_stream_daily"] = "already_dispatched"
+
+            # BioRxiv needs recovery when Beat missed a run or both metadata providers failed.
+            await session.execute(text("""UPDATE arxiv_crawl_log SET status='failed',
+                error_message='auto-reset stale running',finished_at=now() AT TIME ZONE 'UTC'
+                WHERE status='running' AND started_at < (now() AT TIME ZONE 'UTC')-interval '35 minutes'"""))
+            await session.commit()
+            for source, hour, minute in (("biorxiv", 3, 30),):
+                day_start, day_end = _target_day_window(hour, minute)
+                done = (await session.execute(text("""SELECT 1 FROM arxiv_crawl_log
+                    WHERE source=:source AND task_type IN ('incremental','incremental_fallback')
+                    AND ((status='success' AND date_to >= :target_day AND started_at >= :day_start)
+                         OR (status='running' AND started_at >= :running_after)) LIMIT 1"""),
+                    {"source": source, "target_day": day_start.date(),
+                     "day_start": day_start.astimezone(pytz.UTC).replace(tzinfo=None),
+                     "running_after": datetime.utcnow()-timedelta(minutes=35)})).first()
+                if done:
+                    actions[f"{source}_incremental"] = "ok_or_running"
+                elif await _claim_once(_marker_key(f"{source}_incremental", day_start)):
+                    celery_app.send_task(f"{source}.incremental_crawl", queue="arxiv", expires=21600)
+                    actions[f"{source}_incremental"] = "dispatched"
+                else:
+                    actions[f"{source}_incremental"] = "already_dispatched"
 
             # 模块2：顶刊增量（按期刊检查 crawl_task_log_journals）
             j_start_local, j_end_local = _target_day_window(4, 0)
@@ -482,6 +536,7 @@ def ensure_daily_jobs() -> dict:
                                 "journals_tracking.crawl_single_journal",
                                 args=[issn_l],
                                 queue="journals_tracking",
+                        expires=21600,
                                 countdown=idx * 2,
                             )
                             dispatched.append(issn_l)
@@ -537,6 +592,7 @@ def ensure_daily_jobs() -> dict:
                     celery_app.send_task(
                         "journals_tracking.update_citation_counts",
                         queue="journals_tracking",
+                        expires=21600,
                     )
                     actions["journals_citations"] = "dispatched"
                 else:
@@ -583,6 +639,7 @@ def ensure_daily_jobs() -> dict:
                     celery_app.send_task(
                         "journals_tracking.refresh_time_labels",
                         queue="journals_tracking",
+                        expires=21600,
                     )
                     actions["journals_time_labels"] = "dispatched"
                 else:
@@ -630,6 +687,7 @@ def ensure_daily_jobs() -> dict:
                     celery_app.send_task(
                         "journals_tracking.classify_cns_sports_related",
                         queue="journals_tracking",
+                        expires=21600,
                     )
                     actions["cns_sports_classify"] = "dispatched"
                 else:
@@ -638,6 +696,6 @@ def ensure_daily_jobs() -> dict:
         return actions
 
     try:
-        return asyncio.run(_run())
+        return run_async(_run())
     except Exception as e:
         return {"status": "failed", "error": str(e)}

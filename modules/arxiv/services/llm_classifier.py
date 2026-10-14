@@ -4,6 +4,7 @@ LLM分类服务
 """
 import json
 import logging
+import math
 from typing import Dict, List, Optional, Tuple
 from openai import OpenAI
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ArxivLLMClassifier:
     """arXiv文章LLM分类器"""
 
-    def __init__(self, api_key: str, base_url: str = "https://api.deepseek.com/v1"):
+    def __init__(self, api_key: str, base_url: str = "https://api.deepseek.com/v1", *, strict: bool = False):
         """
         初始化LLM分类器
 
@@ -23,7 +24,8 @@ class ArxivLLMClassifier:
             api_key: DeepSeek API密钥
             base_url: API基础URL
         """
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=30, max_retries=2)
+        self.strict = strict
         self.model = DEEPSEEK_V4_FLASH_MODEL
 
     def judge_relevance(self, title: str, abstract: str) -> Tuple[float, str]:
@@ -54,7 +56,8 @@ class ArxivLLMClassifier:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=100,
+                max_tokens=256,
+                response_format={"type": "json_object"},
                 temperature=0.3,
                 extra_body={"thinking": THINKING_DISABLED},
             )
@@ -62,15 +65,21 @@ class ArxivLLMClassifier:
             content = response.choices[0].message.content.strip()
             # 尝试解析JSON
             result = json.loads(content)
-            relevance = float(result.get("relevance", 0.0))
+            relevance = float(result["relevance"])
+            if not math.isfinite(relevance) or not 0 <= relevance <= 1:
+                raise ValueError("Invalid relevance score")
             reason = result.get("reason", "未知")
 
             return relevance, reason
 
         except json.JSONDecodeError as e:
+            if self.strict:
+                raise RuntimeError("Preprint relevance response was not valid JSON") from e
             logger.error(f"JSON解析失败: {content}, 错误: {e}")
             return 0.0, "JSON解析失败"
         except Exception as e:
+            if self.strict:
+                raise RuntimeError("Preprint relevance classification failed") from e
             logger.error(f"相关度判断失败: {e}")
             return 0.0, f"API调用失败: {str(e)}"
 

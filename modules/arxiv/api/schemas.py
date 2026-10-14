@@ -11,7 +11,7 @@ class ArxivArticleResponse(BaseModel):
 
     id: int
     arxiv_id: str
-    version: int
+    version: Optional[int] = None
     source: str
     title: str
     title_zh: Optional[str] = None

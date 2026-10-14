@@ -14,10 +14,6 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
 export default function KnowledgeGraph() {
   const outlet = useOutletContext()
   const authSession = outlet?.authSession
-  const openLogin = outlet?.openLogin
-  const openMembership = outlet?.openMembership
-  const isGuest = Boolean(authSession?.user?.is_guest || authSession?.user?.nickname === '访客' || authSession?.user?.nickname === '游客')
-  const isMember = Boolean(authSession?.user?.is_member)
 
   const [loading, setLoading] = useState(true)
   const [communities, setCommunities] = useState([])
@@ -32,6 +28,11 @@ export default function KnowledgeGraph() {
   // 按「数据源+时间窗口」缓存图谱与WiW结果，避免切换模块时丢失
   const [graphCache, setGraphCache] = useState({}) // key -> { communities, snapshot }
   const [wiwStateByKey, setWiwStateByKey] = useState({}) // key -> { [communityId]: {...} }
+  const graphRequest = useRef(null)
+  const graphSequence = useRef(0)
+  const renderSequence = useRef(0)
+  const activeView = useRef('')
+  const pendingWiw = useRef(new Set())
   const [expandedComms, setExpandedComms] = useState(new Set([0, 1, 2]))  // 默认展开前3个社区
   const [titleVisible, setTitleVisible] = useState(false)
 	  const chartRef = useRef(null)
@@ -42,20 +43,16 @@ export default function KnowledgeGraph() {
 	  const BANNED = useRef(new Set(["systematic review","meta-analysis","scoping review","narrative review","review","randomized controlled trial","randomised controlled trial","clinical trial","pilot study","case report","retrospective study","prospective study","cohort study","cross-sectional study","protocol"]))
 	  const SYNONYMS = useRef({
     'acl': 'anterior cruciate ligament',
-    'anterior cruciate ligament': 'acl',
     'vo2 max': 'vo2max',
-    'vo2max': 'vo2 max',
     'hrv': 'heart rate variability',
-    'heart rate variability': 'hrv',
     'emg': 'electromyography',
-    'electromyography': 'emg',
-    'pcl': 'posterior cruciate ligament',
-    'posterior cruciate ligament': 'pcl'
+    'pcl': 'posterior cruciate ligament'
   })
 
   // 当前视图对应的 key 与 WiW 状态
   const currentKey = `${selectedSource}:${selectedWindow}`
-  const wiwState = wiwStateByKey[currentKey] || {}
+  activeView.current = currentKey
+  const wiwState = wiwStateByKey[snapshot?.snapshot_id] || {}
 
 	  const normalizeTermClient = (t) => {
 	    const normalized = (t || '').toLowerCase().replace(/[_\-/]+/g, ' ').replace(/[^\w\s\+]+/g, '').replace(/\s+/g, ' ').trim()
@@ -75,7 +72,7 @@ export default function KnowledgeGraph() {
     const s = normalizeTermClient(t)
     if (!s || s.length < 3) return false
     if (/^\d+$/.test(s)) return false
-    for (const banned of BANNED.current) { if (s.includes(banned)) return false }
+    for (const banned of BANNED.current) { if (s.includes(normalizeTermClient(banned))) return false }
     const tokens = s.split(' ')
     const kept = tokens.filter(x => x && !STOPWORDS.current.has(x))
     return kept.length > 0
@@ -208,9 +205,12 @@ export default function KnowledgeGraph() {
       .slice(0, 5)
   }
 
-  const loadWiwInternal = async (snapshotId, communityId, keyOverride) => {
+  const loadWiwInternal = async (snapshotId, communityId, generate = false) => {
     if (!snapshotId || !communityId) return
-    const key = keyOverride || currentKey
+    const key = snapshotId
+    const requestKey = `${snapshotId}:${communityId}`
+    if (pendingWiw.current.has(requestKey)) return
+    pendingWiw.current.add(requestKey)
     // 标记指定key下该社区WiW为loading
     setWiwStateByKey((prev) => {
       const prevForKey = prev[key] || {}
@@ -228,13 +228,14 @@ export default function KnowledgeGraph() {
           communityId
         )}/wiw`,
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lang: 'zh' })
+          method: generate ? 'POST' : 'GET',
+          credentials: 'include',
+          ...(generate ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: 'zh' }) } : {})
         }
       )
       if (!res.ok) {
-        throw new Error(`WiW请求失败: HTTP ${res.status}`)
+        const failure = await res.json().catch(() => ({}))
+        throw new Error(failure.detail?.message || failure.detail || `WiW请求失败: HTTP ${res.status}`)
       }
       const data = await res.json()
       setWiwStateByKey((prev) => {
@@ -255,7 +256,6 @@ export default function KnowledgeGraph() {
       })
     } catch (e) {
       setWiwStateByKey((prev) => {
-        const key = keyOverride || currentKey
         const prevForKey = prev[key] || {}
         return {
           ...prev,
@@ -269,12 +269,14 @@ export default function KnowledgeGraph() {
           }
         }
       })
+    } finally {
+      pendingWiw.current.delete(requestKey)
     }
   }
 
   const handleLoadWiw = async (communityId) => {
     if (!snapshot || !snapshot.snapshot_id || !communityId) return
-    await loadWiwInternal(snapshot.snapshot_id, communityId, currentKey)
+    await loadWiwInternal(snapshot.snapshot_id, communityId, true)
   }
 
   const renderWiwWithLinks = (wiw) => {
@@ -373,6 +375,7 @@ export default function KnowledgeGraph() {
     const y = Math.max(20, Math.min(rect.height - 20, rect.height * 0.5))
     const place = 'left'
     setPopover({ x, y, place, community: best })
+    requestAnimationFrame(() => popoverRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
   }
 
   useEffect(() => {
@@ -380,18 +383,8 @@ export default function KnowledgeGraph() {
     return () => clearTimeout(timer)
   }, [])
 
-  // 访问控制：访客禁止访问；非会员锁定为「文献上新」图谱
   useEffect(() => {
     if (!authSession) return
-    if (isGuest) return
-    if (!isMember && selectedSource !== 'literature') {
-      setSelectedSource('literature')
-    }
-  }, [authSession, isGuest, isMember, selectedSource])
-
-  useEffect(() => {
-    if (!authSession) return
-    if (isGuest) return
     loadGraph()
     
     // 响应式调整
@@ -403,17 +396,28 @@ export default function KnowledgeGraph() {
     window.addEventListener('resize', handleResize)
     
     return () => {
+      graphRequest.current?.abort()
+      graphSequence.current += 1
+      renderSequence.current += 1
       window.removeEventListener('resize', handleResize)
       if (chartInstance.current) {
         chartInstance.current.dispose()
         chartInstance.current = null
       }
     }
-  }, [authSession, isGuest, selectedSource, selectedWindow])
+  }, [authSession, selectedSource, selectedWindow])
 
   const loadGraph = async (source = selectedSource, windowSize = selectedWindow, options = {}) => {
     const { force = false } = options
     const key = `${source}:${windowSize}`
+    graphRequest.current?.abort()
+    const controller = new AbortController()
+    graphRequest.current = controller
+    const sequence = ++graphSequence.current
+    renderSequence.current += 1
+    const isCurrent = () => !controller.signal.aborted && sequence === graphSequence.current && key === activeView.current
+    setPopover(null)
+    setFilteredKeyword(null)
 
     // 若已有缓存且非强制刷新，则直接使用缓存数据，避免切换模块时重置结果
     if (!force && graphCache[key] && Array.isArray(graphCache[key].communities)) {
@@ -437,21 +441,16 @@ export default function KnowledgeGraph() {
     setLoading(true)
     setError(null)
     setSelectedCommunity(null)
+    setSnapshot(null)
+    setGlobalKeywords([])
     
     try {
       const response = await fetch(
-        `${API_BASE}/graph/communities?source=${source}&window=${windowSize}`
+        `${API_BASE}/graph/communities?source=${source}&window=${windowSize}`,
+        { signal: controller.signal }
       )
       
       if (!response.ok) {
-        if (response.status === 401) {
-          openLogin && openLogin()
-          throw new Error('该模块需要登录后访问')
-        }
-        if (response.status === 403) {
-          openMembership && openMembership()
-          throw new Error('非会员仅可访问「文献上新」图谱')
-        }
         if (response.status === 404) {
           throw new Error('数据正在生成中，请稍后再试')
         }
@@ -459,6 +458,7 @@ export default function KnowledgeGraph() {
       }
       
       const data = await response.json()
+      if (!isCurrent()) return
       const items = data.items || []
       const snap = data.snapshot || null
       setCommunities(items)
@@ -475,12 +475,12 @@ export default function KnowledgeGraph() {
         }
       }))
 
-      // 自动为 Top5 社区预生成 WiW（仅在有 snapshot_id 时）
+      // 浏览时只读取预生成摘要，用户点击后才调用模型。
       if (snap && snap.snapshot_id && items.length > 0) {
         const topForWiw = getTopCommunities(items).slice(0, 5)
         topForWiw.forEach((comm) => {
           if (comm && comm.community_id) {
-            loadWiwInternal(snap.snapshot_id, comm.community_id, key)
+            loadWiwInternal(snap.snapshot_id, comm.community_id)
           }
         })
       }
@@ -490,10 +490,11 @@ export default function KnowledgeGraph() {
         renderCommunityGraph(items)
       }
     } catch (err) {
+      if (!isCurrent()) return
       setError(err.message)
       console.error('Failed to load graph:', err)
     } finally {
-      setLoading(false)
+      if (isCurrent()) setLoading(false)
     }
   }
 
@@ -504,7 +505,9 @@ export default function KnowledgeGraph() {
     }
     
     // 确保在下一帧渲染，等待DOM完全挂载
+    const sequence = ++renderSequence.current
     setTimeout(() => {
+      if (!chartRef.current || sequence !== renderSequence.current) return
       if (chartInstance.current) {
         chartInstance.current.dispose()
         chartInstance.current = null
@@ -514,6 +517,11 @@ export default function KnowledgeGraph() {
       
       // 使用像素风格方块
       const nodes = recommendedPixelStyle(communitiesData)
+      // 社区变大后原始直径会超过画布，按当前画布和节点数量统一缩放。
+      const area = chartRef.current.clientWidth * chartRef.current.clientHeight
+      const maxDiameter = Math.max(48, Math.min(140, Math.sqrt(area / Math.max(nodes.length, 1)) * 0.8))
+      const sizeScale = Math.min(1, maxDiameter / Math.max(...nodes.map(node => node.symbolSize), 1))
+      nodes.forEach(node => { node.symbolSize = Math.max(24, node.symbolSize * sizeScale) })
       
       // 初始化ECharts
       chartInstance.current = echarts.init(chartRef.current)
@@ -562,8 +570,8 @@ export default function KnowledgeGraph() {
             fontWeight: 'bold'
           },
           force: {
-            repulsion: 1200,
-            gravity: 0.05,
+            repulsion: Math.max(120, Math.min(650, 17500 / Math.max(nodes.length, 1))),
+            gravity: 0.2,
             edgeLength: 200,
             layoutAnimation: true,
             friction: 0.4
@@ -713,43 +721,26 @@ export default function KnowledgeGraph() {
         />
       </header>
 
-      {authSession && isGuest && (
-        <div style={{ padding: '16px' }}>
-          <p style={{ marginBottom: '12px' }}>该模块需要登录后访问</p>
-          <button
-            type="button"
-            className="qq-login-entry"
-            onClick={() => openLogin && openLogin()}
-            aria-label="QQ登录"
-          >
-            <img src="/qq-login.png" alt="QQ登录" className="qq-login-img" draggable="false" />
-          </button>
-        </div>
-      )}
-
-      {authSession && !isGuest && !isMember && (
-        <div style={{ padding: '0 16px 12px', color: '#666', fontSize: '14px' }}>
-          非会员仅可访问「文献上新」图谱；其他数据源需要会员解锁
-        </div>
-      )}
-      
       <div className={styles.controlsBar}>
         <select 
           value={selectedSource} 
-          onChange={(e) => setSelectedSource(e.target.value)}
+          onChange={(e) => {
+            setSelectedSource(e.target.value)
+            if (e.target.value !== 'literature' && selectedWindow === '1d') setSelectedWindow('7d')
+          }}
           className={styles.kgSelect}
-          disabled={!authSession || isGuest}
+          disabled={!authSession}
         >
           <option value="literature">文献上新</option>
-          <option value="sports_journals" disabled={!isMember}>运动科学顶刊</option>
-          <option value="cns" disabled={!isMember}>CNS综合顶刊</option>
+          <option value="sports_journals">运动科学顶刊</option>
+          <option value="cns">CNS综合顶刊</option>
         </select>
         
         <select 
           value={selectedWindow} 
           onChange={(e) => setSelectedWindow(e.target.value)}
           className={styles.kgSelect}
-          disabled={!authSession || isGuest}
+          disabled={!authSession}
         >
           {/* 仅文献上新支持1天窗口；顶刊类从7天起步 */}
           {selectedSource === 'literature' && <option value="1d">最近1天</option>}
@@ -761,7 +752,7 @@ export default function KnowledgeGraph() {
         <button
           onClick={() => loadGraph(selectedSource, selectedWindow, { force: true })}
           className={styles.refreshBtn}
-          disabled={!authSession || isGuest}
+          disabled={!authSession}
         >
           刷新
         </button>
@@ -1099,9 +1090,12 @@ export default function KnowledgeGraph() {
                                   ? '社区摘要生成中…'
                                   : wiw.text
                                   ? '社区摘要已生成'
-                                  : wiw.error
-                                  ? '社区摘要生成失败'
-                                  : '社区摘要就绪'}
+                                  : (
+                                    <button type="button" className={styles.refreshBtn} onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleLoadWiw(comm.community_id)
+                                    }}>{wiw.error ? '重试生成' : '生成社区摘要'}</button>
+                                  )}
                               </span>
                             )}
                           </div>

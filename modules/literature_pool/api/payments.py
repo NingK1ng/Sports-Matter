@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from modules.literature_pool.api.auth import get_current_user_id, require_login_user
+from modules.literature_pool.api.auth import get_current_user_id, get_current_user
 from modules.literature_pool.models.payment_order import PaymentOrder
 from modules.literature_pool.schemas.payment import (
     CreateWebPayRequest,
@@ -32,31 +32,13 @@ router = APIRouter(prefix="/payments", tags=["Payments"])
 @router.post("/yungouos/alipay/webpay", response_model=CreateWebPayResponse)
 async def create_yungouos_alipay_webpay(
     data: CreateWebPayRequest,
-    user=Depends(require_login_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     创建 YunGouOS 支付宝电脑网站支付订单
     """
-    service = PaymentService(db)
-    try:
-        order, pay_url, form = await service.create_yungouos_alipay_webpay(
-            user_id=user.id,
-            tier=data.tier,
-            invite_code=data.invite_code,
-        )
-    except PaymentConfigError as e:
-        raise HTTPException(status_code=501, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    return CreateWebPayResponse(
-        out_trade_no=order.out_trade_no,
-        tier=order.tier,
-        amount=str(order.amount),
-        pay_url=pay_url,
-        form=form,
-    )
+    raise HTTPException(status_code=410, detail={"code": "PUBLIC_ACCESS", "message": "本站已全部免费开放，无需购买会员。"})
 
 
 @router.get("/orders/{out_trade_no}", response_model=PaymentOrderStatusResponse)

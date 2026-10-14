@@ -6,6 +6,9 @@
 
 import asyncio
 import time
+import math
+import hashlib
+from email.utils import parsedate_to_datetime
 from typing import Any, Optional, Dict
 from enum import Enum
 
@@ -15,9 +18,35 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
     retry_if_exception_type,
+    retry_if_exception,
 )
 
 from core.cache import cache_get, cache_set
+
+
+class UpstreamRateLimited(Exception):
+    """The provider must be retried later, without occupying a worker slot."""
+
+    def __init__(self, host: str, retry_after: int):
+        self.retry_after = retry_after
+        super().__init__(f"{host} rate limited; retry in {retry_after}s")
+
+
+def retry_after_seconds(value: str | None, now: float | None = None) -> int:
+    now = time.time() if now is None else now
+    try:
+        delay = float(value)
+    except (TypeError, ValueError):
+        try:
+            delay = parsedate_to_datetime(value).timestamp() - now
+        except (TypeError, ValueError, OverflowError):
+            delay = 60
+    if not math.isfinite(delay):
+        delay = 60
+    return max(1, min(86400, math.ceil(delay)))
+
+
+_provider_cooldowns: dict[str, float] = {}
 
 
 class CircuitState(Enum):
@@ -177,16 +206,9 @@ class BaseAPIClient:
     @retry(
         stop=stop_after_attempt(5),  # 增加到5次重试
         wait=wait_exponential(multiplier=1, min=2, max=30),  # 最大等待30秒
-        retry=retry_if_exception_type((
-            httpx.TimeoutException,
-            httpx.HTTPStatusError,
-            httpx.ConnectError,
-            httpx.RemoteProtocolError,
-            httpx.ReadError,
-            httpx.WriteError,
-            httpx.PoolTimeout,
-            Exception,  # 捕获所有异常（包括anyio.EndOfStream等）
-        )),
+        retry=retry_if_exception(lambda exc: not isinstance(exc, UpstreamRateLimited)
+            and (not isinstance(exc, httpx.HTTPStatusError)
+                 or exc.response.status_code == 408 or exc.response.status_code >= 500)),
         reraise=True,
     )
     async def _request(
@@ -211,6 +233,26 @@ class BaseAPIClient:
         Raises:
             Exception: 请求失败
         """
+        # Cooldowns are shared across instances and workers. Credentials are hashed,
+        # so an anonymous exhausted budget does not block a separately keyed client.
+        auth = (kwargs.get("headers") or {}).get("Authorization") or self.client.headers.get("Authorization", "")
+        host = httpx.URL(self.base_url).host
+        # OpenAlex bills list/filter queries, but ID/DOI singletons are free.
+        # Keep their cooldown separate; a 429 on a singleton is still respected.
+        singleton = host == "api.openalex.org" and endpoint.startswith("/works/")
+        identity = f"{host}:{auth}" + (":singleton" if singleton else "")
+        scope = hashlib.sha256(identity.encode()).hexdigest()[:24]
+        cooldown_key = f"upstream:cooldown:{scope}"
+        until = _provider_cooldowns.get(scope, 0)
+        if host == "api.openalex.org" and until <= time.time():
+            try:
+                until = float(await cache_get(cooldown_key) or 0)
+            except (TypeError, ValueError):
+                until = 0
+            _provider_cooldowns[scope] = until
+        if until > time.time():
+            raise UpstreamRateLimited(host, math.ceil(until - time.time()))
+
         # 直接异步调用，不使用熔断器（避免事件循环冲突）
         try:
             response = await self.client.request(method, endpoint, params=params, **kwargs)
@@ -220,12 +262,12 @@ class BaseAPIClient:
 
         # 处理429（速率限制）
         if response.status_code == 429:
-            retry_after = int(response.headers.get("Retry-After", 1))  # 默认1秒而不是60秒
-            print(f"⚠️  速率限制！等待{retry_after}秒...")
-            await asyncio.sleep(retry_after)
-            raise httpx.HTTPStatusError(
-                f"Rate limited", request=response.request, response=response
-            )
+            retry_after = retry_after_seconds(response.headers.get("Retry-After"))
+            until = time.time() + retry_after
+            _provider_cooldowns[scope] = until
+            if host == "api.openalex.org":
+                await cache_set(cooldown_key, until, ttl=retry_after)
+            raise UpstreamRateLimited(host, retry_after)
 
         # 处理5xx错误
         if 500 <= response.status_code < 600:

@@ -27,16 +27,9 @@ function Assistant() {
   // 设置
   const [useAgent, setUseAgent] = useState(false)
   const [topK, setTopK] = useState(10)
-  const [model, setModel] = useState('deepseek-v4-flash')  // 模型选择
+  const [model, setModel] = useState('deepseek-flash')  // 模型选择
   const [reasoningChain, setReasoningChain] = useState('')  // 推理链
 
-  const isMember = Boolean(authSession?.user?.is_member)
-  const assistantQuota = authSession?.quota?.features?.assistant_chat
-  const quotaHint = isMember
-    ? '会员不限次数'
-    : assistantQuota
-        ? `本周剩余：${assistantQuota.remaining}/${assistantQuota.limit}`
-        : '未登录/非会员每周免费 3 次'
   
   const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
   
@@ -242,6 +235,8 @@ function Assistant() {
         .forEach(evt => eventSource.addEventListener(evt, handleMessage))
       
       eventSource.onerror = (err) => {
+        // Named SSE errors already carry the server's quota or service message.
+        if (typeof err.data === 'string' && err.data) return
         console.error('SSE error:', err)
         setError('连接中断，请重试')
         setStatusText('连接中断')
@@ -614,9 +609,6 @@ function Assistant() {
       </aside>
       </div>
 
-      <footer className={styles.quotaFooter}>
-        {quotaHint}
-      </footer>
     </div>
   )
 }

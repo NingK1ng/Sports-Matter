@@ -8,6 +8,7 @@ from __future__ import annotations
 from celery import shared_task
 from typing import Dict, Any
 
+from core.task_runtime import run_async
 from core.database import get_db_session, init_database
 from modules.literature_stream.services.if_importer import import_if_from_excel, enrich_if_for_recent
 
@@ -22,7 +23,7 @@ def import_if_from_excel_task() -> Dict[str, Any]:
             return {"upserts": upserts}
 
     import asyncio
-    return asyncio.run(_run())
+    return run_async(_run())
 
 
 @shared_task(name="literature_stream.enrich_if_recent")
@@ -35,4 +36,4 @@ def enrich_if_recent_task(days: int = 90) -> Dict[str, Any]:
             return {"updated": updated, "days": days}
 
     import asyncio
-    return asyncio.run(_run())
+    return run_async(_run())

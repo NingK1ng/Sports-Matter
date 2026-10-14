@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './index.css'
-import LoginModal from '../../components/AuthModals/LoginModal'
-import MembershipModal from '../../components/AuthModals/MembershipModal'
 import CheckInModal from '../../components/CheckIn/CheckInModal'
 import CursorOverlay from '../../components/CheckIn/CursorOverlay'
+import MembershipModal from '../../components/AuthModals/MembershipModal'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
+const CHECK_IN_ENABLED = false
 
 function Home() {
   const navigate = useNavigate()
@@ -16,9 +16,8 @@ function Home() {
   const [visitorCount, setVisitorCount] = useState(0)
   const [showSiteIntro, setShowSiteIntro] = useState(false)
   const [authSession, setAuthSession] = useState(null)
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [showMemberModal, setShowMemberModal] = useState(false)
   const [showCheckInModal, setShowCheckInModal] = useState(false)
+  const [showMembershipModal, setShowMembershipModal] = useState(false)
   const [cursorId, setCursorId] = useState(() => {
     try {
       const saved = localStorage.getItem('sm_selected_cursor_id')
@@ -29,17 +28,6 @@ function Home() {
     }
   })
 
-  const membershipIcon = (() => {
-    const tier = authSession?.user?.membership_tier
-    if (!authSession?.user?.is_member) return null
-    if (authSession?.user?.membership_is_lifetime || tier === 'lifetime') {
-      return { src: '/lifetime-heart.gif', alt: '终身会员' }
-    }
-    if (tier === 'yearly') return { src: '/yearly-food.png', alt: '年度会员' }
-    if (tier === 'monthly') return { src: '/monthly-food.png', alt: '月度会员' }
-    return null
-  })()
-  
   const siteIntroUrl = 'https://mp.weixin.qq.com/s?__biz=MzcxMDE0MjcwMQ==&mid=2247483669&idx=1&sn=f2e118fd6aea7810bfaa884081687b0d'
 
   useEffect(() => {
@@ -193,13 +181,6 @@ function Home() {
     }
   ]
 
-  const isGuest = Boolean(
-    authSession?.logged_in &&
-      authSession?.user &&
-      (authSession.user.is_guest || authSession.user.nickname === '访客' || authSession.user.nickname === '游客')
-  )
-  const isMember = Boolean(authSession?.user?.is_member)
-
   const persistCursorId = (nextId) => {
     const id = nextId ? Number(nextId) : null
     const safeId = Number.isFinite(id) && id ? id : null
@@ -217,7 +198,7 @@ function Home() {
 
   useEffect(() => {
     if (authSession == null) return
-    if (!authSession?.logged_in || isGuest) {
+    if (!authSession?.logged_in) {
       persistCursorId(null)
       return
     }
@@ -235,29 +216,10 @@ function Home() {
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authSession?.logged_in, isGuest])
+  }, [authSession?.logged_in])
 
-  const handleModuleNavigate = (path) => {
-    // 访客禁止访问：热点图谱、运动科学期刊
-    if (isGuest && (path === '/knowledge-graph' || path === '/sports-journals')) {
-      setShowLoginModal(true)
-      return
-    }
-    // Sports Pigeon：仅会员可用
-    if (path === '/literature-pool' && !isMember) {
-      setShowMemberModal(true)
-      return
-    }
-    navigate(path)
-  }
-
-  const openCheckin = () => {
-    if (!authSession?.logged_in || isGuest) {
-      setShowLoginModal(true)
-      return
-    }
-    setShowCheckInModal(true)
-  }
+  const handleModuleNavigate = (path) => navigate(path)
+  const openCheckin = () => setShowCheckInModal(true)
 
   return (
     <div className="home-page wood-texture">
@@ -279,57 +241,14 @@ function Home() {
           </div>
 
           <div className="auth-badges">
-            <div className="auth-row">
-              {!authSession?.logged_in || isGuest ? (
-                <>
-                  <button
-                    className="qq-login-entry"
-                    onClick={() => setShowLoginModal(true)}
-                    aria-label="QQ登录"
-                  >
-                    <img
-                      src="/qq-login.png"
-                      alt="QQ登录"
-                      className="qq-login-img"
-                      draggable="false"
-                    />
-                  </button>
-                  <button
-                    className="pixel-badge member-badge"
-                    onClick={() => setShowMemberModal(true)}
-                  >
-                    成为会员
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="user-info-badge">
-                    {membershipIcon && (
-                      <img
-                        src={membershipIcon.src}
-                        alt={membershipIcon.alt}
-                        className="user-membership-icon"
-                        draggable="false"
-                      />
-                    )}
-                    {authSession.user.avatar && (
-                      <img src={authSession.user.avatar} alt="avatar" className="user-avatar-small" />
-                    )}
-                    <span>{authSession.user.nickname}</span>
-                  </div>
-                  <button
-                    className="pixel-badge member-badge"
-                    onClick={() => setShowMemberModal(true)}
-                  >
-                    成为会员
-                  </button>
-                </>
-              )}
-            </div>
-
-            <button type="button" className="pixel-badge checkin-badge" onClick={openCheckin}>
-              签到
+            <button type="button" className="pixel-badge member-badge" onClick={() => setShowMembershipModal(true)}>
+              会员
             </button>
+            {CHECK_IN_ENABLED && (
+              <button type="button" className="pixel-badge checkin-badge" onClick={openCheckin}>
+                签到
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -392,27 +311,12 @@ function Home() {
         )}
       </section>
 
-      {/* Auth Modals */}
-      {showLoginModal && (
-        <LoginModal onClose={() => setShowLoginModal(false)} />
+      {showMembershipModal && (
+        <MembershipModal onClose={() => setShowMembershipModal(false)} authSession={authSession} onMembershipUpdated={refreshSession} />
       )}
-
-      {showMemberModal && (
-        <MembershipModal
-          onClose={() => setShowMemberModal(false)}
-          authSession={authSession}
-          onLoginRequired={() => {
-            setShowMemberModal(false)
-            setShowLoginModal(true)
-          }}
-          onMembershipUpdated={refreshSession}
-        />
-      )}
-
-      {showCheckInModal && (
+      {CHECK_IN_ENABLED && showCheckInModal && (
         <CheckInModal
           onClose={() => setShowCheckInModal(false)}
-          onLoginRequired={() => setShowLoginModal(true)}
           onCursorChanged={(id) => persistCursorId(id)}
         />
       )}

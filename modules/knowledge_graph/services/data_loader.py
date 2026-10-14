@@ -4,7 +4,7 @@
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 from datetime import timezone
@@ -14,6 +14,9 @@ from modules.literature_stream.models.literature import Literature
 from modules.journals.models.journal import JournalArticle
 
 logger = logging.getLogger(__name__)
+
+# Publication notices must not form research-topic communities by duplicating a title.
+PUBLICATION_NOTICE = r"^\s*(correction\s+to\s*:|(?:publisher|author)\s+correction\s*:|erratum\s*:|corrigendum\s*:|retraction\s*:|retracted\s*:|comment\s+on\s*:|response\s+to\s+comment\s+on\s*:)"
 
 
 class DataLoader:
@@ -104,6 +107,10 @@ class DataLoader:
                 .order_by(Literature.publication_date.desc())
             )
 
+        query = query.where(
+            or_(Literature.literature_types.is_(None), ~Literature.literature_types.contains(["non_research"])),
+            ~Literature.title.op("~*")(PUBLICATION_NOTICE),
+        )
         result = await self.db.stream(query)
         # 转换为字典格式（流式迭代，降低内存峰值）
         data = []
@@ -241,6 +248,7 @@ class DataLoader:
                 .order_by(JournalArticle.publication_date.desc())
             )
 
+        query = query.where(~JournalArticle.title.op("~*")(PUBLICATION_NOTICE))
         result = await self.db.stream(query)
         # 转换为字典格式（流式迭代）
         data = []

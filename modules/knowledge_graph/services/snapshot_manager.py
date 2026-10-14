@@ -473,10 +473,16 @@ class SnapshotManager:
             return existing
         elif existing and force_rebuild:
             logger.info(f"Forcing rebuild of snapshot {snapshot_id}")
-            # 先删除旧记录
-            await self.db.execute(delete(CommunitySnapshot).where(CommunitySnapshot.snapshot_id == snapshot_id))
-            await self.db.execute(delete(GraphSnapshot).where(GraphSnapshot.snapshot_id == snapshot_id))
+
+        async def publish(snapshot, details=()):
+            # Keep the previous snapshot visible until the replacement is fully ready.
+            if existing:
+                await self.db.execute(delete(CommunitySnapshot).where(CommunitySnapshot.snapshot_id == snapshot_id))
+                await self.db.execute(delete(GraphSnapshot).where(GraphSnapshot.snapshot_id == snapshot_id))
+            self.db.add(snapshot)
+            self.db.add_all(details)
             await self.db.commit()
+            await self.db.refresh(snapshot)
         
         # 创建新快照
         logger.info(f"Creating new snapshot: source={source}, window={window}, as_of={as_of.date()}")
@@ -511,9 +517,7 @@ class SnapshotManager:
                     meta=meta,
                     communities_summary=[]
                 )
-                self.db.add(snapshot)
-                await self.db.commit()
-                await self.db.refresh(snapshot)
+                await publish(snapshot)
                 logger.info(f"✅ Empty snapshot {snapshot_id} created (no papers)")
                 return snapshot
             return None
@@ -538,6 +542,19 @@ class SnapshotManager:
 
         # 3. 构建图
         graph = self.graph_builder.build_graph(papers)
+
+        connected_coverage = sum(degree > 0 for _, degree in graph.degree()) / max(len(graph), 1)
+        try:
+            sparse_tau = float(os.getenv("KG_TAU_SPARSE", "0.06"))
+        except ValueError:
+            sparse_tau = 0.06
+        # Long-window exact-phrase keywords can isolate almost the entire corpus at 0.20.
+        # Retain the same weighted-Jaccard rule; relax only a demonstrably sparse graph.
+        if window != "1d" and connected_coverage < 0.25 and 0 < sparse_tau < use_tau:
+            logger.warning("Sparse graph coverage %.3f; rebuilding at tau %.3f", connected_coverage, sparse_tau)
+            self.graph_builder.tau = sparse_tau
+            graph = self.graph_builder.build_graph(papers)
+            connected_coverage = sum(degree > 0 for _, degree in graph.degree()) / max(len(graph), 1)
         
         if graph.number_of_nodes() == 0:
             logger.warning("Empty graph generated")
@@ -558,9 +575,7 @@ class SnapshotManager:
                     meta=meta,
                     communities_summary=[]
                 )
-                self.db.add(snapshot)
-                await self.db.commit()
-                await self.db.refresh(snapshot)
+                await publish(snapshot)
                 logger.info(f"✅ Empty snapshot {snapshot_id} created (empty graph)")
                 return snapshot
             return None
@@ -601,9 +616,7 @@ class SnapshotManager:
                     meta=meta,
                     communities_summary=[]
                 )
-                self.db.add(snapshot)
-                await self.db.commit()
-                await self.db.refresh(snapshot)
+                await publish(snapshot)
                 logger.info(f"✅ Empty snapshot {snapshot_id} created (no communities)")
                 return snapshot
             else:
@@ -618,8 +631,10 @@ class SnapshotManager:
             "edge_count": graph.number_of_edges(),
             "community_count": len(communities),
             "keywords_coverage": round(keywords_coverage, 3),
+            "connected_coverage": round(connected_coverage, 3),
+            "edge_threshold": self.graph_builder.tau,
             "detector": self.comm_detector.detector_name,
-            "degraded": keywords_coverage < 0.5
+            "degraded": keywords_coverage < 0.5 or (window != "1d" and connected_coverage < 0.25)
         }
         
         # 6. 生成社区摘要（TF-IDF代表术语 + LLM 聚类命名）
@@ -643,9 +658,9 @@ class SnapshotManager:
         # 并发执行 LLM 标注（全局并发可由环境覆盖）
         import os
         try:
-            global_cc = int(os.getenv("KG_LLM_CONCURRENCY", "64"))
+            global_cc = int(os.getenv("KG_LLM_CONCURRENCY", "8"))
         except Exception:
-            global_cc = 64
+            global_cc = 8
         # 为综合顶刊（CNS）使用通用顶刊提示词，其余使用sports
         profile = "general_top" if source == "cns" else "sports"
         # 仅调用一次：对全量 communities 打标签（避免 top50 与 detail 重复打标）
@@ -653,6 +668,7 @@ class SnapshotManager:
         labels = await self._label_communities_with_llm(
             items_to_label, graph, window, as_of.date().isoformat(), concurrency=global_cc, profile=profile
         )
+        meta["label_error_count"] = sum(bool(v.get("label_failed")) for v in labels.values())
         for cid, term in isolate_labels.items():
             labels[cid] = {
                 "insufficient_signal": True,
@@ -748,7 +764,7 @@ class SnapshotManager:
             communities_summary=communities_summary
         )
         
-        self.db.add(snapshot)
+        details = []
         
         # 8. 保存社区详情（含 LLM 标签与摘要）
         for comm_id, nodes in communities.items():
@@ -829,10 +845,9 @@ class SnapshotManager:
                     "degraded": keywords_coverage < 0.5
                 }
             )
-            self.db.add(comm_snapshot)
+            details.append(comm_snapshot)
         
-        await self.db.commit()
-        await self.db.refresh(snapshot)
+        await publish(snapshot, details)
         
         logger.info(f"✅ Snapshot {snapshot_id} created successfully with {len(communities)} communities")
         
@@ -861,7 +876,8 @@ class SnapshotManager:
                 try:
                     res = await self.llm_clusterer.cluster_for_community(payload["terms"], payload["titles"], window, as_of, profile=profile)
                 except Exception:
-                    res = {"insufficient_signal": True, "main_label": "", "candidates": [], "rationale": "error", "evidence_map": []}
+                    logger.exception("Community naming failed for %s", comm_id)
+                    res = {"insufficient_signal": True, "main_label": "", "candidates": [], "rationale": "", "evidence_map": [], "label_failed": True}
                 results[comm_id] = res
 
         await asyncio.gather(*[_run(cid) for cid, _ in items])

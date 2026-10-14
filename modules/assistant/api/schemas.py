@@ -3,6 +3,7 @@ Assistant API Schemas
 """
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Dict, Optional
+from core.external.deepseek import DEEPSEEK_FLASH_MODEL
 
 
 class AssistantChatRequest(BaseModel):
@@ -15,9 +16,9 @@ class AssistantChatRequest(BaseModel):
     top_k: int = Field(10, description="召回文献数量", ge=1, le=50)
     lang: str = Field("zh", description="语言: zh|en", pattern="^(zh|en)$")
     model: str = Field(
-        "deepseek-v4-flash",
-        description="LLM模型: deepseek-v4-flash（兼容旧deepseek-chat|deepseek-reasoner入参）",
-        pattern="^(deepseek-v4-flash|deepseek-chat|deepseek-reasoner)$",
+        DEEPSEEK_FLASH_MODEL,
+        description="LLM模型: deepseek-flash（兼容旧deepseek-v4-flash|deepseek-chat|deepseek-reasoner入参）",
+        pattern="^(deepseek-flash|deepseek-v4-flash|deepseek-chat|deepseek-reasoner)$",
     )
     session_id: Optional[str] = Field(None, description="会话ID，用于短期记忆")
     local_source: str = Field(

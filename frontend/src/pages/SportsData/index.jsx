@@ -22,14 +22,6 @@ export default function SportsData() {
     return () => clearTimeout(timer)
   }, [])
 
-  const isMember = Boolean(authSession?.user?.is_member)
-  const quota = authSession?.quota
-  const sportsDataQuota = quota?.features?.sports_data_search
-  const quotaHint = isMember
-    ? '会员不限次数'
-    : (sportsDataQuota
-        ? `本周剩余：Sports Data ${sportsDataQuota.remaining}/${sportsDataQuota.limit}`
-        : '未登录/非会员每周免费 5 次（Sports Data）')
 
   const handleSearch = async (e) => {
     e.preventDefault()
@@ -254,9 +246,6 @@ export default function SportsData() {
         )}
       </section>
 
-      <footer className="sports-data-quota-footer">
-        {quotaHint}
-      </footer>
     </div>
   )
 }

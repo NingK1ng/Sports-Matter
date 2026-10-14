@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import httpx
@@ -270,41 +271,50 @@ class LLMClusterer:
             return self._normalize_result(cached)
         system = self._build_system_prompt(profile)
         user = self._build_user_prompt(top_terms, sample_titles, window, as_of, profile)
+        token_budget = self.max_tokens
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.post(
-                f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user}
-                    ],
-                    "temperature": 0.2,
-                    "response_format": {"type": "json_object"},
-                    "max_tokens": self.max_tokens,
-                    "thinking": THINKING_DISABLED,
-                }
-            )
-            resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"]
-            text = content.strip()
-            if text.startswith("```"):
-                text = text.replace("```json", "").replace("```", "").strip()
-            try:
-                data = json.loads(text)
-            except Exception:
-                # 尝试提取第一个大括号JSON
-                start = text.find("{")
-                end = text.rfind("}")
-                if start != -1 and end != -1 and end > start:
-                    data = json.loads(text[start:end+1])
-                else:
-                    raise
-            data = self._normalize_result(data)
-            # save cache
-            try:
-                self._cache_set(ck, data)
-            except Exception:
-                pass
-            return data
+            for attempt in range(3):
+                try:
+                    resp = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+                        json={
+                            "model": self.model,
+                            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                            "temperature": 0.2,
+                            "response_format": {"type": "json_object"},
+                            "max_tokens": token_budget,
+                            "thinking": THINKING_DISABLED,
+                        },
+                    )
+                    resp.raise_for_status()
+                    choice = resp.json()["choices"][0]
+                    if choice.get("finish_reason") == "length":
+                        token_budget = min(token_budget * 2, 3200)
+                        raise ValueError("Community label JSON was truncated")
+                    content = choice.get("message", {}).get("content") or ""
+                    text = content.strip()
+                    if text.startswith("```"):
+                        text = text.replace("```json", "").replace("```", "").strip()
+                    try:
+                        data = json.loads(text)
+                    except json.JSONDecodeError:
+                        start, end = text.find("{"), text.rfind("}")
+                        if start != -1 and end > start:
+                            data = json.loads(text[start:end + 1])
+                        else:
+                            raise
+                    if not isinstance(data, dict):
+                        raise ValueError("Community label must be a JSON object")
+                    data = self._normalize_result(data)
+                    try:
+                        self._cache_set(ck, data)
+                    except Exception:
+                        pass
+                    return data
+                except (httpx.HTTPError, ValueError) as exc:
+                    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code not in {429, 500, 502, 503, 504, 529}:
+                        raise
+                    if attempt == 2:
+                        raise
+                    await asyncio.sleep(attempt + 1)

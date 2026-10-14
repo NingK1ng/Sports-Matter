@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from core.database import get_db
-from modules.literature_pool.api.auth import is_member_user, require_login_user
+from modules.literature_pool.api.auth import get_current_user, consume_daily_quota
 from modules.knowledge_graph.api.schemas import (
     CommunityListResponse,
     CommunityDetail,
@@ -33,7 +33,7 @@ async def get_communities(
     window: str = Query(..., description="时间窗口: 1d|7d|30d|180d"),
     as_of: Optional[str] = Query(None, description="快照日期 (YYYY-MM-DD, UTC)"),
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_login_user),
+    user=Depends(get_current_user),
 ):
     """
     获取社区列表（只读快照，不在请求时计算）
@@ -47,12 +47,6 @@ async def get_communities(
     if window not in ["1d", "7d", "30d", "180d"]:
         raise HTTPException(status_code=400, detail="Invalid window")
 
-    # 访问控制：非会员仅可访问「文献上新」图谱
-    if source != "literature" and not is_member_user(user):
-        raise HTTPException(
-            status_code=403,
-            detail={"code": "MEMBERSHIP_REQUIRED", "message": "非会员仅可访问「文献上新」图谱"},
-        )
 
     # 查找匹配快照：指定 as_of 则精确匹配；否则取最新 as_of
     if as_of:
@@ -113,7 +107,7 @@ async def get_community_detail(
     snapshot_id: str,
     community_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_login_user),
+    user=Depends(get_current_user),
 ):
     """
     获取社区详情（使用snapshot_id确保跨快照唯一）
@@ -132,11 +126,6 @@ async def get_community_detail(
     if not snapshot:
         raise HTTPException(status_code=404, detail="Snapshot not found")
 
-    if snapshot.source != "literature" and not is_member_user(user):
-        raise HTTPException(
-            status_code=403,
-            detail={"code": "MEMBERSHIP_REQUIRED", "message": "非会员仅可访问「文献上新」图谱"},
-        )
     
     # 查询社区详情
     comm_query = select(CommunitySnapshot).where(
@@ -169,13 +158,26 @@ async def get_community_detail(
     )
 
 
+@router.get("/snapshots/{snapshot_id}/community/{community_id}/wiw", response_model=WiWResponse)
+async def get_cached_wiw_analysis(
+    snapshot_id: str,
+    community_id: str,
+    lang: str = "zh",
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await generate_wiw_analysis(
+        snapshot_id, community_id, WiWRequest(lang=lang, cached_only=True), db, user
+    )
+
+
 @router.post("/snapshots/{snapshot_id}/community/{community_id}/wiw", response_model=WiWResponse)
 async def generate_wiw_analysis(
     snapshot_id: str,
     community_id: str,
     request: WiWRequest,
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_login_user),
+    user=Depends(get_current_user),
 ):
     """
     生成社区WiW分析（统一走snapshot路径，确保community_id在正确快照上下文）
@@ -197,11 +199,6 @@ async def generate_wiw_analysis(
     if not snapshot:
         raise HTTPException(status_code=404, detail="Snapshot not found")
 
-    if snapshot.source != "literature" and not is_member_user(user):
-        raise HTTPException(
-            status_code=403,
-            detail={"code": "MEMBERSHIP_REQUIRED", "message": "非会员仅可访问「文献上新」图谱"},
-        )
 
     # 优先使用缓存（metrics 中已保存的社区摘要文本）
     lang = (request.lang or "zh").lower()
@@ -230,13 +227,18 @@ async def generate_wiw_analysis(
                 continue
 
     # 如果不强制重新生成且缓存存在，直接返回缓存
-    if cached_text and not force_regenerate:
+    if cached_text and (request.cached_only or not force_regenerate):
         return WiWResponse(
             community_id=community_id,
             wiw_analysis=cached_text,
             generated_at=cached_ts or datetime.utcnow().isoformat(),
             citations=citations,
         )
+
+    if request.cached_only:
+        return WiWResponse(community_id=community_id, wiw_analysis="", generated_at="", citations=[])
+
+    await consume_daily_quota(db, user, "graph_wiw")
 
     # 需要调用 LLM 生成新的社区中文摘要（WiW 风格），失败时直接报错
     import logging

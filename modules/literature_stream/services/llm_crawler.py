@@ -280,7 +280,7 @@ class LLMPubMedCrawler:
                 'date_filter': date_filter,
                 'date_field': date_field_norm,
                 'sports_gate': SPORTS_GATE,
-                'window_days': 3,
+                'window_days': (end_utc - start_utc).total_seconds() / 86400,
             },
             status='running',
             started_at=datetime.utcnow(),
@@ -290,7 +290,7 @@ class LLMPubMedCrawler:
 
         try:
             print(f"\n{'='*80}")
-            print(f"🔄 增量爬取（3天窗口）")
+            print(f"🔄 增量爬取（记录的日期窗口）")
             print(f"{'='*80}")
             print(f"时间范围: {start_utc.strftime('%Y-%m-%d')} 至 {end_utc.strftime('%Y-%m-%d')}")
             print(f"{'='*80}\n")

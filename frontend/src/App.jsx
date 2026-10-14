@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
@@ -13,6 +14,18 @@ import ComingSoon from './pages/ComingSoon'
 import SportsData from './pages/SportsData'
 
 function App() {
+  const [ready, setReady] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const initialize = () => {
+    setFailed(false)
+    fetch('/api/v1/pool/auth/session', { credentials: 'include', cache: 'no-store' })
+      .then(res => { if (!res.ok) throw new Error('session'); return res.json() })
+      .then(() => setReady(true)).catch(() => setFailed(true))
+  }
+  useEffect(initialize, [])
+  if (!ready) return <div role="status" style={{ padding: 40, textAlign: 'center' }}>
+    {failed ? <>暂时无法连接网站。<button onClick={initialize}>重新连接</button></> : '正在打开 Sports Matter…'}
+  </div>
   return (
     <Routes>
       <Route path="/" element={<Home />} />

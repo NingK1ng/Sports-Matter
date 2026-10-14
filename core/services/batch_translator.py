@@ -481,12 +481,12 @@ class BatchTranslator:
 输入标题：
 {titles_text}
 
-输出JSON数组格式（严格遵守）：
-[
+输出JSON对象格式（严格遵守，translations 是数组）：
+{{"translations": [
   {{"index": 1, "title_zh": "中文翻译"}},
   {{"index": 2, "title_zh": "中文翻译"}},
   ...
-]
+]}}
 
 请输出JSON："""
 

@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from celery import shared_task
 from sqlalchemy import select, desc
+from core.task_runtime import run_async
 from core.database import get_session_factory, init_database
 from modules.knowledge_graph.models.snapshot import GraphSnapshot, CommunitySnapshot
 from modules.knowledge_graph.services.kg_wiw_generator import KGWiWGenerator
@@ -13,150 +14,47 @@ from modules.knowledge_graph.services.snapshot_manager import SnapshotManager
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="knowledge_graph.build_snapshot_1d")
+async def _build_window(window: str) -> dict:
+    """Build each source in a fresh session and report actual failures to Celery."""
+    from zoneinfo import ZoneInfo
+    await init_database()
+    as_of = datetime.now(ZoneInfo("Asia/Shanghai"))
+    session_factory = get_session_factory()
+    completed, failed = [], []
+    for source in ["sports_journals", "cns", "literature"]:
+        async with session_factory() as db:
+            try:
+                snapshot = await SnapshotManager(db).create_or_get_snapshot(source, window, as_of)
+                if snapshot is None:
+                    raise RuntimeError("snapshot generation returned no result")
+                completed.append(source)
+            except Exception:
+                await db.rollback()
+                logger.exception("Failed to build %s/%s snapshot", source, window)
+                failed.append(source)
+    if failed:
+        raise RuntimeError(f"Snapshot {window} failed for {', '.join(failed)}; completed: {', '.join(completed)}")
+    return {"status": "success", "window": window, "sources": completed}
+
+
+@shared_task(name="knowledge_graph.build_snapshot_1d", autoretry_for=(Exception,), retry_backoff=60, max_retries=2)
 def build_snapshot_1d():
-    """
-    构建1天窗口快照（每天凌晨2点UTC+8运行）
-    
-    预计算3个source的1天快照：literature, sports_journals, cns
-    """
-    import asyncio
-    
-    async def _build():
-        await init_database()
-        session_factory = get_session_factory()
-        async with session_factory() as db:
-            manager = SnapshotManager(db)
-            # 以业务时区为准（Celery 配置为 Asia/Shanghai）
-            import pytz
-            as_of = datetime.now(pytz.timezone("Asia/Shanghai"))
-            
-            sources = ["literature", "sports_journals", "cns"]
-            window = "1d"
-            
-            for source in sources:
-                try:
-                    logger.info(f"Building 1d snapshot for {source}...")
-                    snapshot = await manager.create_or_get_snapshot(source, window, as_of)
-                    if snapshot:
-                        logger.info(f"✅ {source} 1d snapshot created: {snapshot.snapshot_id}")
-                    else:
-                        logger.warning(f"⚠️  {source} 1d snapshot creation failed")
-                except Exception as e:
-                    logger.error(f"❌ Failed to build {source} 1d snapshot: {e}")
-    
-    asyncio.run(_build())
-    return f"✅ 1d snapshots built at {datetime.utcnow().isoformat()}"
+    return run_async(_build_window("1d"))
 
 
-@shared_task(name="knowledge_graph.build_snapshot_7d")
+@shared_task(name="knowledge_graph.build_snapshot_7d", autoretry_for=(Exception,), retry_backoff=60, max_retries=2)
 def build_snapshot_7d():
-    """
-    构建7天窗口快照（每天凌晨3点UTC+8运行）
-    
-    预计算3个source的7天快照：literature, sports_journals, cns
-    """
-    import asyncio
-    
-    async def _build():
-        await init_database()
-        session_factory = get_session_factory()
-        async with session_factory() as db:
-            manager = SnapshotManager(db)
-            # 以业务时区为准（Celery 配置为 Asia/Shanghai）
-            import pytz
-            as_of = datetime.now(pytz.timezone("Asia/Shanghai"))
-            
-            sources = ["literature", "sports_journals", "cns"]
-            window = "7d"
-            
-            for source in sources:
-                try:
-                    logger.info(f"Building 7d snapshot for {source}...")
-                    snapshot = await manager.create_or_get_snapshot(source, window, as_of)
-                    if snapshot:
-                        logger.info(f"✅ {source} 7d snapshot created: {snapshot.snapshot_id}")
-                    else:
-                        logger.warning(f"⚠️  {source} 7d snapshot creation failed")
-                except Exception as e:
-                    logger.error(f"❌ Failed to build {source} 7d snapshot: {e}")
-    
-    asyncio.run(_build())
-    return f"✅ 7d snapshots built at {datetime.utcnow().isoformat()}"
+    return run_async(_build_window("7d"))
 
 
-@shared_task(name="knowledge_graph.build_snapshot_30d")
+@shared_task(name="knowledge_graph.build_snapshot_30d", autoretry_for=(Exception,), retry_backoff=60, max_retries=2)
 def build_snapshot_30d():
-    """
-    构建30天窗口快照（每周一凌晨2点UTC+8运行）
-    
-    预计算3个source的30天快照：literature, sports_journals, cns
-    """
-    import asyncio
-    
-    async def _build():
-        await init_database()
-        session_factory = get_session_factory()
-        async with session_factory() as db:
-            manager = SnapshotManager(db)
-            # 以业务时区为准（Celery 配置为 Asia/Shanghai）
-            import pytz
-            as_of = datetime.now(pytz.timezone("Asia/Shanghai"))
-            
-            # 大窗口优先构建小源（顶刊/CNS），避免 literature 量大导致其它源长期不更新
-            sources = ["sports_journals", "cns", "literature"]
-            window = "30d"
-            
-            for source in sources:
-                try:
-                    logger.info(f"Building 30d snapshot for {source}...")
-                    snapshot = await manager.create_or_get_snapshot(source, window, as_of)
-                    if snapshot:
-                        logger.info(f"✅ {source} 30d snapshot created: {snapshot.snapshot_id}")
-                    else:
-                        logger.warning(f"⚠️  {source} 30d snapshot creation failed")
-                except Exception as e:
-                    logger.error(f"❌ Failed to build {source} 30d snapshot: {e}")
-    
-    asyncio.run(_build())
-    return f"✅ 30d snapshots built at {datetime.utcnow().isoformat()}"
+    return run_async(_build_window("30d"))
 
 
-@shared_task(name="knowledge_graph.build_snapshot_180d")
+@shared_task(name="knowledge_graph.build_snapshot_180d", autoretry_for=(Exception,), retry_backoff=60, max_retries=2)
 def build_snapshot_180d():
-    """
-    构建180天窗口快照（每月1日凌晨2点UTC+8运行）
-    
-    预计算3个source的180天快照：literature, sports_journals, cns
-    """
-    import asyncio
-    
-    async def _build():
-        await init_database()
-        session_factory = get_session_factory()
-        async with session_factory() as db:
-            manager = SnapshotManager(db)
-            # 以业务时区为准（Celery 配置为 Asia/Shanghai）
-            import pytz
-            as_of = datetime.now(pytz.timezone("Asia/Shanghai"))
-            
-            # 大窗口优先构建小源（顶刊/CNS），避免 literature 量大导致其它源长期不更新
-            sources = ["sports_journals", "cns", "literature"]
-            window = "180d"
-            
-            for source in sources:
-                try:
-                    logger.info(f"Building 180d snapshot for {source}...")
-                    snapshot = await manager.create_or_get_snapshot(source, window, as_of)
-                    if snapshot:
-                        logger.info(f"✅ {source} 180d snapshot created: {snapshot.snapshot_id}")
-                    else:
-                        logger.warning(f"⚠️  {source} 180d snapshot creation failed")
-                except Exception as e:
-                    logger.error(f"❌ Failed to build {source} 180d snapshot: {e}")
-    
-    asyncio.run(_build())
-    return f"✅ 180d snapshots built at {datetime.utcnow().isoformat()}"
+    return run_async(_build_window("180d"))
 
 
 @shared_task(name="knowledge_graph.precompute_wiw")
@@ -368,4 +266,4 @@ def precompute_wiw(
                 "concurrency": concurrency,
             }
 
-    return asyncio.run(_run())
+    return run_async(_run())

@@ -7,6 +7,7 @@ from celery import shared_task
 from sqlalchemy import select
 from datetime import datetime, timedelta
 
+from core.task_runtime import run_async
 from core.database import get_db_session
 from modules.literature_pool.models.subscription import PoolSubscription
 from modules.literature_pool.models.user import User
@@ -75,7 +76,7 @@ def search_stream_articles_task(subscription_id: int) -> dict:
                 "added_count": added_count
             }
     
-    return asyncio.run(_run())
+    return run_async(_run())
 
 
 @shared_task(name="literature_pool.search_all_subscriptions_stream")
@@ -145,4 +146,4 @@ def search_all_subscriptions_stream_task() -> dict:
                 "total_articles_added": total_count
             }
     
-    return asyncio.run(_run())
+    return run_async(_run())

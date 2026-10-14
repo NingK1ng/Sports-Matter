@@ -6,7 +6,7 @@ import logging
 import re
 from datetime import datetime, date
 from typing import List, Dict, Optional, Tuple
-from sqlalchemy import select, func, and_, or_, text
+from sqlalchemy import select, func, and_, or_, text, null
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
@@ -51,6 +51,10 @@ class ArxivDatabaseService:
             existing = result.scalar_one_or_none()
 
             if existing:
+                if article.get("source") == "biorxiv":
+                    incoming_version = article.get("version")
+                    if incoming_version is None or (existing.version is not None and incoming_version < existing.version):
+                        continue  # A fallback or older official page must not downgrade a known version.
                 # 更新现有记录（保留旧分类）
                 existing.version = article.get("version", existing.version)
                 existing.title = article["title"]
@@ -90,7 +94,7 @@ class ArxivDatabaseService:
                 # 插入新记录
                 new_article = ArxivArticle(
                     arxiv_id=arxiv_id,
-                    version=article.get("version", 1),
+                    version=null() if article.get("version", 1) is None else article.get("version", 1),
                     source=article.get("source", "arxiv"),
                     title=article["title"],
                     title_zh=incoming_title_zh,

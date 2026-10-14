@@ -15,7 +15,7 @@ from core.database import get_db
 from modules.research_gap.services.wiw_generator import WiWGenerator
 from modules.research_gap.models.wiw import WiWResult
 from core.external.pubmed import get_pubmed_client
-from modules.literature_pool.api.auth import require_weekly_quota
+from modules.literature_pool.api.auth import require_daily_quota
 
 
 router = APIRouter(prefix="/wiw", tags=["研究空白"])
@@ -71,7 +71,7 @@ class WiWGenerateRequest(BaseModel):
 async def generate_wiw(
     request: WiWGenerateRequest,
     session: AsyncSession = Depends(get_db),
-    _user=Depends(require_weekly_quota("wiw_generate", 3)),
+    _user=Depends(require_daily_quota("wiw_generate")),
 ):
     """
     生成WiW（What is What）研究空白分析

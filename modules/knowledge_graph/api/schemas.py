@@ -19,6 +19,8 @@ class TopPaper(BaseModel):
     abstract: Optional[str] = Field(None, description="摘要")
     score: float = Field(..., description="相关性分数", ge=0, le=1)
     pub_date: Optional[str] = Field(None, description="发表日期")
+    doi: Optional[str] = Field(None, description="DOI")
+    keywords: List[str] = Field(default_factory=list, description="用于关键词筛选的文献术语")
 
 
 class CommunityMetrics(BaseModel):
@@ -76,6 +78,7 @@ class WiWRequest(BaseModel):
     """WiW分析请求"""
     lang: str = Field(default="zh", description="语言: zh|en")
     force_regenerate: bool = Field(default=False, description="强制重新生成（忽略缓存）")
+    cached_only: bool = Field(default=False, description="仅读取已有分析，不调用模型")
 
 
 class WiWCitation(BaseModel):

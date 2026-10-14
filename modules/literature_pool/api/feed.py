@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.cache import cache_get, cache_set
-from modules.literature_pool.api.auth import require_member_user
+from modules.literature_pool.api.auth import get_current_user
 from modules.literature_pool.services.subscription_service import SubscriptionService
 from modules.literature_pool.services.pool_service import PoolService
 from modules.literature_pool.services.wiw_service import WiWService
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/feed", tags=["Feed"])
 @router.get("/{subscription_id}", response_model=FeedResponse)
 async def get_feed(
     subscription_id: int,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -109,7 +109,7 @@ async def get_feed(
 async def get_feed_by_track(
     subscription_id: int,
     track: str,
-    user=Depends(require_member_user),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
