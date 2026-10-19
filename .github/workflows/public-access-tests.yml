@@ -1,0 +1,54 @@
+name: Public access regression tests
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_literature_pool/**"
+      - "modules/literature_pool/**"
+      - "core/**"
+      - "api/**"
+      - ".github/workflows/public-access-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tests/test_literature_pool/**"
+      - "modules/literature_pool/**"
+      - "core/**"
+      - "api/**"
+      - ".github/workflows/public-access-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-access-postgresql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: sports_matter_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sports_matter_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPORTS_MATTER_TEST_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/sports_matter_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: tests/test_literature_pool/requirements.txt
+      - name: Install isolated test dependencies
+        run: python -m pip install -r tests/test_literature_pool/requirements.txt
+      - name: Run public authentication and daily quota tests
+        run: python -m pytest tests/test_literature_pool -o addopts="-ra --strict-markers"

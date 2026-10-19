@@ -1,9 +1,10 @@
 """
 Literature Pool API Integration Tests
 """
+
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 
 @pytest.mark.asyncio
@@ -21,12 +22,9 @@ async def test_create_subscription_api(client: AsyncClient, test_user_token):
     response = await client.post(
         "/v1/pool/subscriptions",
         headers={"Authorization": f"Bearer {test_user_token}"},
-        json={
-            "title": "运动损伤",
-            "query_text": "sports injury"
-        }
+        json={"title": "运动损伤", "query_text": "sports injury"},
     )
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "运动损伤"
@@ -41,15 +39,14 @@ async def test_get_subscriptions_api(client: AsyncClient, test_user_token):
     await client.post(
         "/v1/pool/subscriptions",
         headers={"Authorization": f"Bearer {test_user_token}"},
-        json={"title": "测试订阅", "query_text": "test query"}
+        json={"title": "测试订阅", "query_text": "test query"},
     )
-    
+
     # 获取订阅列表
     response = await client.get(
-        "/v1/pool/subscriptions",
-        headers={"Authorization": f"Bearer {test_user_token}"}
+        "/v1/pool/subscriptions", headers={"Authorization": f"Bearer {test_user_token}"}
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "subscriptions" in data
@@ -57,13 +54,20 @@ async def test_get_subscriptions_api(client: AsyncClient, test_user_token):
 
 
 @pytest.mark.asyncio
-async def test_get_feed_api(client: AsyncClient, test_user_token, test_subscription_id):
+async def test_get_feed_api(
+    client: AsyncClient, test_user_token, test_subscription_id, monkeypatch
+):
     """测试获取Feed流API"""
+    from modules.literature_pool.api import feed
+    from modules.research_gap.services import wiw_generator
+
+    monkeypatch.setattr(wiw_generator, "get_pubmed_client", Mock())
+    monkeypatch.setattr(feed, "cache_get", AsyncMock(return_value=[]))
     response = await client.get(
         f"/v1/pool/feed/{test_subscription_id}",
-        headers={"Authorization": f"Bearer {test_user_token}"}
+        headers={"Authorization": f"Bearer {test_user_token}"},
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "stream_cards" in data
@@ -72,17 +76,27 @@ async def test_get_feed_api(client: AsyncClient, test_user_token, test_subscript
 
 
 @pytest.mark.asyncio
-async def test_unauthorized_access(client: AsyncClient):
-    """测试未授权访问"""
+async def test_public_access_without_token(client: AsyncClient):
+    """没有令牌的访客可以读取自己的订阅。"""
     response = await client.get("/v1/pool/subscriptions")
-    assert response.status_code == 422  # Missing Authorization header
+    assert response.status_code == 200
+    assert response.json() == {"subscriptions": [], "total": 0}
+    session = await client.get("/v1/pool/auth/session")
+    assert session.status_code == 200
+    assert session.json()["user"]["is_guest"] is True
 
 
 @pytest.mark.asyncio
-async def test_invalid_token(client: AsyncClient):
-    """测试无效token"""
+async def test_invalid_token_falls_back_to_same_visitor(client: AsyncClient):
+    """无效令牌回退到当前访客，不拒绝访问或创建另一个身份。"""
+    before = await client.get("/v1/pool/auth/session")
     response = await client.get(
-        "/v1/pool/subscriptions",
-        headers={"Authorization": "Bearer invalid_token_123"}
+        "/v1/pool/subscriptions", headers={"Authorization": "Bearer invalid_token_123"}
     )
-    assert response.status_code == 401
+    assert response.status_code == 200
+    assert response.json() == {"subscriptions": [], "total": 0}
+    after = await client.get(
+        "/v1/pool/auth/session", headers={"Authorization": "Bearer invalid_token_123"}
+    )
+    assert after.status_code == 200
+    assert after.json()["user"] == before.json()["user"]
